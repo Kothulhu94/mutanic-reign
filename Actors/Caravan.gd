@@ -29,8 +29,7 @@ var current_state: State = State.IDLE
 
 # Navigation
 @export var movement_speed: float = 100.0
-var navigation_path: Array[Vector2] = []
-var path_index: int = 0
+var nav_agent: NavigationAgent2D = null
 
 # References
 var item_db: ItemDB = null
@@ -43,14 +42,23 @@ var purchase_prices: Dictionary = {}  # item_id -> price paid per unit
 func _ready() -> void:
 	add_to_group("caravan")
 
+	# Get NavigationAgent2D reference
+	nav_agent = get_node_or_null("NavigationAgent2D") as NavigationAgent2D
+
 func setup(home: Hub, state: CaravanState, db: ItemDB, hubs: Array[Hub]) -> void:
 	home_hub = home
 	caravan_state = state
 	item_db = db
 	all_hubs = hubs
 
+	# Configure navigation from CaravanType
 	if caravan_state.caravan_type != null:
 		movement_speed *= caravan_state.caravan_type.speed_modifier
+
+		# Configure NavigationAgent2D from CaravanType
+		if nav_agent != null:
+			nav_agent.max_speed = movement_speed
+			nav_agent.navigation_layers = caravan_state.caravan_type.navigation_layers
 
 	# Position at home hub
 	global_position = home.global_position
@@ -95,6 +103,7 @@ func _state_buying_at_home() -> void:
 	# Spend all money on preferred items with surplus
 	var items_to_buy: Dictionary = _get_preferred_items_with_surplus(home_hub)
 
+	var total_bought: int = 0
 	for item_id: StringName in items_to_buy.keys():
 		var available: int = items_to_buy[item_id]
 		var price: float = home_hub.get_item_price(item_id)
@@ -108,35 +117,44 @@ func _state_buying_at_home() -> void:
 				caravan_state.money -= total_cost
 				caravan_state.add_item(item_id, amount_to_buy)
 				purchase_prices[item_id] = price
+				total_bought += amount_to_buy
+
+	print("[Caravan %s @ %s] Bought %d items, inventory: %d types" % [
+		caravan_state.caravan_type.type_id if caravan_state.caravan_type else "?",
+		home_hub.name,
+		total_bought,
+		caravan_state.inventory.size()
+	])
 
 	# Find a destination hub
 	if caravan_state.inventory.size() > 0:
 		_find_next_destination()
 		if current_target_hub != null:
+			print("  -> Traveling to %s" % current_target_hub.name)
 			_transition_to(State.TRAVELING)
 		else:
 			# No destination found, return to idle
+			print("  -> No destination, going idle")
 			_transition_to(State.IDLE)
 	else:
 		# Couldn't buy anything
+		print("  -> Couldn't buy anything, going idle")
 		_transition_to(State.IDLE)
 
 func _state_traveling(delta: float) -> void:
-	if navigation_path.is_empty() or path_index >= navigation_path.size():
-		# Reached destination
+	if nav_agent == null:
+		return
+
+	# Check if we've reached the destination
+	if nav_agent.is_navigation_finished():
 		if current_target_hub != null:
 			_transition_to(State.EVALUATING_TRADE)
 		return
 
-	var target: Vector2 = navigation_path[path_index]
-	var direction: Vector2 = (target - global_position).normalized()
-	var distance: float = global_position.distance_to(target)
-
-	if distance < movement_speed * delta:
-		global_position = target
-		path_index += 1
-	else:
-		global_position += direction * movement_speed * delta
+	# Move toward next path position
+	var next_position: Vector2 = nav_agent.get_next_path_position()
+	var direction: Vector2 = (next_position - global_position).normalized()
+	global_position += direction * movement_speed * delta
 
 func _state_evaluating_trade() -> void:
 	# Check prices at current hub and decide whether to sell
@@ -199,20 +217,18 @@ func _state_seeking_next_hub() -> void:
 		_transition_to(State.RETURNING_HOME)
 
 func _state_returning_home(delta: float) -> void:
-	if navigation_path.is_empty() or path_index >= navigation_path.size():
-		# Reached home
+	if nav_agent == null:
+		return
+
+	# Check if we've reached home
+	if nav_agent.is_navigation_finished():
 		_arrive_at_home()
 		return
 
-	var target: Vector2 = navigation_path[path_index]
-	var direction: Vector2 = (target - global_position).normalized()
-	var distance: float = global_position.distance_to(target)
-
-	if distance < movement_speed * delta:
-		global_position = target
-		path_index += 1
-	else:
-		global_position += direction * movement_speed * delta
+	# Move toward next path position
+	var next_position: Vector2 = nav_agent.get_next_path_position()
+	var direction: Vector2 = (next_position - global_position).normalized()
+	global_position += direction * movement_speed * delta
 
 # ============================================================
 # AI Helpers
@@ -276,11 +292,14 @@ func _find_next_destination() -> void:
 			continue
 		available_hubs.append(hub)
 
-	# If only one other hub exists (2 hubs total), or no unvisited hubs, don't set destination
-	if all_hubs.size() <= 2 or available_hubs.is_empty():
-		return
+	# If no unvisited hubs remain, clear visited list and try again (allows ping-pong between 2 hubs)
+	if available_hubs.is_empty():
+		visited_hubs.clear()
+		for hub: Hub in all_hubs:
+			if hub != home_hub:
+				available_hubs.append(hub)
 
-	# Pick the first available hub (can be enhanced with profit calculation)
+	# Pick the first available hub
 	if available_hubs.size() > 0:
 		current_target_hub = available_hubs[0]
 
@@ -304,13 +323,11 @@ func _arrive_at_home() -> void:
 # Navigation
 # ============================================================
 func _start_navigation_to(target_hub: Hub) -> void:
-	if target_hub == null:
-		navigation_path.clear()
+	if target_hub == null or nav_agent == null:
 		return
 
-	# Simple straight-line navigation (can be enhanced with NavigationAgent2D)
-	navigation_path = [target_hub.global_position]
-	path_index = 0
+	# Set NavigationAgent2D target (it will use the configured navigation_layers)
+	nav_agent.target_position = target_hub.global_position
 
 # ============================================================
 # Public API

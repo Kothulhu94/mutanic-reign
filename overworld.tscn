@@ -1,5 +1,6 @@
 [gd_scene load_steps=541 format=3 uid="uid://bn7il32yep7nb"]
 
+[ext_resource type="Script" path="res://overworld.gd" id="1_overworld"]
 [ext_resource type="Script" uid="uid://c13gtnisdmqyn" path="res://scripts/chunker.gd" id="2_nyb65"]
 [ext_resource type="Texture2D" uid="uid://nwu1dekjdwcn" path="res://chunks/chunk_0_0.png" id="3_mb8ku"]
 [ext_resource type="Texture2D" uid="uid://sicksodv4up4" path="res://chunks/chunk_1_0.png" id="4_7r4as"]
@@ -2359,7 +2360,7 @@ agent_radius = 0.0
 
 [node name="Overworld" type="Node2D"]
 scale = Vector2(6, 6)
-script = SubResource("GDScript_3kidx")
+script = ExtResource("1_overworld")
 bus_spawn_point = Vector2(1000, 1805)
 
 [node name="Chunker" type="Node2D" parent="."]
@@ -4557,7 +4558,3 @@ state = ExtResource("259_vu0qf")
 [node name="Stonegrove" parent="." instance=ExtResource("258_7r4as")]
 position = Vector2(5968, 4281.3335)
 state = ExtResource("261_pyulv")
-
-[node name="Caravan" type="Area2D" parent="."]
-script = ExtResource("261_w0vem")
-metadata/_custom_type_script = "uid://b2iyabtka0f3x"

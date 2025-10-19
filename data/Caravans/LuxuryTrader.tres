@@ -5,9 +5,13 @@
 
 [resource]
 script = ExtResource("1_2pp1m")
+type_id = "luxury"
+display_name = "Luxury Merchant"
 sprite = ExtResource("2_eq8fq")
 speed_modifier = 1.2
 capacity_modifier = 0.7
+base_capacity = 1000
+navigation_layers = 1
 starting_money_multiplier = 2.0
 preferred_tags = Array[StringName]([&"luxury"])
 metadata/_custom_type_script = "uid://baj5eti6c1qc7"

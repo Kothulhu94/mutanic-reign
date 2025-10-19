@@ -18,7 +18,5 @@ scale = Vector2(0.42969, 0.1875)
 
 [node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
 path_desired_distance = 10.0
-target_desired_distance = 10.0
 path_max_distance = 50.0
 avoidance_enabled = true
-debug_enabled = false

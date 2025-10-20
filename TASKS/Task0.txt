@@ -1,0 +1,669 @@
+Of course. Here is the consolidated prompt without any citation markers.
+
+You are a Godot 4.5 senior game developer. Build the character progression system for Mutant Reign following these exact specifications:
+
+## CORE ARCHITECTURE
+
+Build 4 focused components in this order:
+
+### 1. ATTRIBUTE SYSTEM (CharacterAttributes.gd)
+- `RefCounted` class that manages 4 attributes: **Might, Guile, Intellect, Willpower**
+- Each attribute: `current_level` (int), `current_xp` (float), `xp_to_next` (float)
+- Signals: `attribute_leveled(attribute_name: StringName, new_level: int)`
+- Methods:
+  * `add_attribute_xp(attribute_name: StringName, xp: float) -> void`
+  * `get_attribute_level(attribute_name: StringName) -> int`
+  * `to_dict() -> Dictionary` (for saving/loading)
+- No signals for XP gain (too noisy), only for levelups
+- **Soft cap**: Attributes level 1-5 normally, 6-10 at 80% rate, 11+ at 30% rate
+
+---
+### 2. DOMAIN SYSTEM (DomainSpec.gd - Resource)
+- `@export var domain_id: StringName = StringName()`
+- `@export var display_name: String = ""`
+- `@export var primary_attribute: StringName = StringName()`
+- `@export var secondary_attribute: StringName = StringName()`
+- Load from `.tres` files in `res://data/Domains/`
+- Create all 12 domains as `.tres` Resources:
+  Melee (M+W), Ranged (G+I), Artifact Weapons (I+W),
+  Exploration (M+G), Craftsmanship (M+I), Trading (G+W),
+  Governance (W+I), Leadership (M+W),
+  Criminality (G+M), Espionage (G+I), Diplomacy (G+W), Religion (W+I)
+
+---
+### 3. SKILL SYSTEM (SkillSpec.gd - Resource)
+- `@export var skill_id: StringName = StringName()`
+- `@export var display_name: String = ""`
+- `@export var domain_id: StringName = StringName()`
+- `var current_rank: int = 0`
+- `var current_xp: float = 0.0`
+- `var xp_to_next_rank: float = 100.0` (calculated based on rank)
+- Signals: `skill_ranked_up(skill_id: StringName, new_rank: int)`
+- Methods:
+  * `add_xp(xp: float) -> void` (handles leveling internally)
+  * `get_progress_percent() -> float`
+
+---
+### 4. XP CALCULATOR (XPCalculator.gd - static utility)
+Core functions (pure math, no game state):
+
+`func calculate_skill_xp(base_xp: int, event: String, difficulty: float, skill_rank: int) -> int:`
+  # event: "use", "success", "failure", "challenge"
+  # Returns skill XP amount
+
+`func split_to_attributes(skill_xp: int) -> Dictionary:`
+  # Returns {"Might": X, "Guile": Y, "Intellect": Z, "Willpower": W}
+  # Equal 50/50 split for now (we'll pass primary/secondary later)
+
+`func apply_difficulty_modifier(attribute_xp: int, difficulty: float) -> int:`
+  # difficulty: 0.0 to 1.0
+  # Returns modified XP
+
+`func apply_challenge_modifier(attribute_xp: int, attribute_level: int, task_difficulty: float) -> int:`
+  # task_difficulty: 0 to 10 (how much of attribute is needed)
+  # Returns modified XP with challenge bonus/penalty
+
+`func apply_attribute_level_penalty(attribute_xp: int, attribute_level: int) -> int:`
+  # Soft cap: 1-5 no penalty, 6-8 80%, 9-10 60%, 11+ 30% * 0.9^(level-10)
+  # Returns modified XP
+
+---
+## CHARACTER PROGRESSION (CharacterProgression.gd - RefCounted)
+- Main class that owns attributes + skills
+- Owns: `CharacterAttributes` instance
+- Owns: Dictionary of `SkillSpec` instances keyed by `skill_id`
+- Methods:
+  * `grant_skill_xp(skill_id: StringName, event: String, difficulty: float) -> void`
+  * `get_attribute(name: StringName) -> int`
+  * `get_skill(skill_id: StringName) -> SkillSpec`
+  * `get_skills_by_domain(domain_id: StringName) -> Array[SkillSpec]`
+  * `to_dict() -> Dictionary` (save game)
+  * `from_dict(data: Dictionary) -> void` (load game)
+
+---
+## DOMAIN & SKILL DEFINITIONS
+This specification will be used to create the `.tres` files for `SkillSpec`.
+
+### 1. MELEE (Might + Willpower)
+*Context: Commander and army effectiveness in close-quarters auto-resolved combat*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **Shield Discipline** (defensive formations)
+  - Effect: Army defense +10% + (Might × 0.75%) + (Willpower × 0.25%)
+  - XP gain: Each battle defending against superior numbers (×difficulty)
+- **Aggressive Tactics** (opening advantage)
+  - Effect: First-clash damage +15% + (Might × 0.75%) + (Willpower × 0.25%)
+  - XP gain: Initiating combat against equal or stronger armies (×difficulty)
+- **Weapon Training** (troop effectiveness)
+  - Effect: Melee troops +12% damage + (Might × 0.75%) + (Willpower × 0.25%)
+  - XP gain: Winning melee engagements (×enemy strength ratio)
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Armor Piercing** (anti-heavy tactics)
+  - Effect: +25% damage vs armored units + (Might × 0.75%)
+  - XP gain: Defeating armored armies (×armor tier)
+- **Flanking Commander** (companion tactics)
+  - Effect: Companion-led armies gain 20% chance to bypass defenses + (Willpower × 0.5%)
+  - XP gain: Companion victories while outnumbered
+- **Battle Momentum** (escalating power)
+  - Effect: +3% damage per consecutive win, max +30% + (Might × 0.75%)
+  - XP gain: Win streaks without losses (×streak length)
+
+**Tier 3 Skills (Ranks 7-10):**
+- **Melee Supremacy** (army dominance)
+  - Effect: All melee units +25% effectiveness + (Might × 1.0%) + (Willpower × 0.5%)
+  - XP gain: Winning 10+ consecutive melee battles
+- **Morale Shatterer** (psychological warfare)
+  - Effect: Enemy morale drops 50% faster, routing chance +20% + (Willpower × 0.75%)
+  - XP gain: Routing armies 2× your size
+
+**Synergy:**
+- **"Crusader Troops"**
+  - Requirement: Melee Rank 5+, Religion Rank 5+
+  - Effect: Faithful units ignore morale penalties, gain +2 damage per 10% faith in army
+  - Example: 80% faithful army = +16 damage to all melee units
+
+---
+### 2. RANGED (Guile + Intelligence)
+*Context: Projectile troops and siege effectiveness in auto-resolved battles*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **Archery Drills** (basic accuracy)
+  - Effect: Ranged damage +12% + (Guile × 0.75%) + (Intelligence × 0.25%)
+  - XP gain: Eliminating enemies before melee contact (×range)
+- **Opening Volley** (first strike)
+  - Effect: Pre-battle damage = 5% of ranged units + (Intelligence × 0.5%)
+  - XP gain: Battles won without melee engagement
+- **Supply Efficiency** (ammo conservation)
+  - Effect: Ranged units use 25% less ammo + (Intelligence × 0.25%)
+  - XP gain: Extended sieges without resupply
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Siege Engineering** (hub assault)
+  - Effect: +30% damage to hub defenses + (Intelligence × 0.75%)
+  - XP gain: Successfully besieging fortified hubs (×wall level)
+- **Suppression Tactics** (morale damage)
+  - Effect: Each volley reduces enemy morale by 2 + (Guile × 0.5%)
+  - XP gain: Breaking enemy morale before melee
+- **Companion Marksmen** (elite units)
+  - Effect: Companions leading ranged units add +20% accuracy + (Guile × 0.5%)
+  - XP gain: Companion-led ranged victories
+
+**Tier 3 Skills (Ranks 7-10):**
+- **Artillery Master** (devastating barrages)
+  - Effect: Siege weapons eliminate 10% of defenders pre-battle + (Intelligence × 1.0%)
+  - XP gain: Conquering hubs with minimal losses
+- **Precision Targeting** (commander elimination)
+  - Effect: 25% chance to eliminate enemy commander pre-battle + (Guile × 0.75%)
+  - XP gain: Assassinating enemy leaders
+
+**Synergy Notes:**
+- Ranged + Craftsmanship: "Superior Ammunition" - +15% ranged damage
+- Ranged + Espionage: "Sniper Networks" - Eliminate key targets pre-battle
+
+---
+### 3. ARTIFACT WEAPONS (Intelligence + Willpower)
+*Context: Rare weapons that provide significant but balanced advantages*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **Artifact Handling** (basic usage)
+  - Effect: Can equip artifacts, +15% artifact effectiveness + (Intelligence × 0.75%) + (Willpower × 0.25%)
+  - XP gain: Using artifacts in combat (×artifact tier)
+- **Energy Conservation** (charge management)
+  - Effect: Artifact charges last 30% longer + (Willpower × 0.5%)
+  - XP gain: Winning battles while conserving charges
+- **Relic Hunter** (finding artifacts)
+  - Effect: +25% chance to find artifacts in ruins + (Intelligence × 0.5%)
+  - XP gain: Exploring ancient sites (×danger level)
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Overcharge Technique** (power burst)
+  - Effect: Can spend all charges for +50% army damage one battle + (Willpower × 0.75%)
+  - XP gain: Desperate victories using overcharge
+- **Artifact Synergy** (multiple relics)
+  - Effect: Each artifact beyond first adds +10% to all artifacts + (Intelligence × 0.5%)
+  - XP gain: Collecting artifact sets
+- **Relic Maintenance** (preservation)
+  - Effect: Artifacts degrade 50% slower + (Intelligence × 0.5%)
+  - XP gain: Maintaining artifacts through multiple battles
+
+**Tier 3 Skills (Ranks 7-10):**
+- **"Artifact Resonance"** (battlefield advantage)
+  - Effect: +5% army bonus per equipped artifact + (Intelligence × 0.75%)
+  - Cap: Maximum 5 artifacts can resonate (25% max bonus)
+  - Cooldown: Artifacts need 3 cycles to resonate after equipping
+  - XP gain: Winning with 3+ artifacts (×battle importance)
+- **Relic Restoration** (repairing broken artifacts)
+  - Effect: Can restore broken artifacts with rare components + NPCs + (Intelligence × 0.75%) + (Willpower × 0.25%)
+  - XP gain: Successfully restoring legendary artifacts
+
+**Synergy Notes:**
+- Artifact + Craftsmanship: "Techno-Synthesis" - Combine tech and magic
+- Artifact + Trading: "Relic Merchant" - Trade artifacts at premium prices
+
+---
+### 4. EXPLORATION (Might + Guile)
+*Context: Unlocks new systems and provides strategic map advantages*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **Pathfinding** (efficient travel)
+  - Effect: Party moves 20% faster, reveals shortcuts + (Might × 0.5%) + (Guile × 0.25%)
+  - XP gain: Discovering new routes (×distance from known paths)
+- **Resource Scanning** (finding materials)
+  - Effect: Reveals resource nodes in 2-hex radius + (Guile × 0.5%)
+  - XP gain: Locating rare resource deposits (×rarity)
+- **Beast Tracking** (creature interaction)
+  - Effect: Can track and tame Tier 1 mutant animals as companions + (Guile × 0.5%)
+  - XP gain: Successfully taming creatures (×danger level)
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Hazard Navigation** (dangerous terrain)
+  - Effect: Party immune to radiation/environmental damage + (Might × 0.75%)
+  - XP gain: Crossing lethal zones (×hazard severity)
+- **Caravan Intelligence** (trade routes)
+  - Effect: See all caravan movements in 5-hex radius + (Guile × 0.5%)
+  - XP gain: Intercepting enemy caravans
+- **Pack Leader** (beast companions)
+  - Effect: Tamed beasts become full companions with inventory + (Might × 0.5%)
+  - XP gain: Training beast companions
+
+**Tier 3 Skills (Ranks 7-10):**
+- **Ruins Specialist** (unlocking vaults)
+  - Effect: Access hidden vaults, find unique building blueprints + (Guile × 0.75%)
+  - XP gain: Unlocking legendary locations
+- **Master Cartographer** (strategic advantage)
+  - Effect: Entire map revealed, all faction movements visible + (Intelligence × 0.5%) + (Guile × 0.5%)
+  - XP gain: Mapping entire world
+
+**Synergy:**
+- **"Infiltration Routes"**
+  - Requirement: Exploration Rank 5+, Espionage Rank 5+
+  - Effect: Discovered shortcuts become spy highways; spies move 2× faster, -50% detection
+  - Permanent: Routes remain even if skills degrade
+
+---
+### 5. CRAFTSMANSHIP (Might + Intelligence)
+*Context: Buildings and production chains that match combat in power*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **Construction Basics** (building efficiency)
+  - Effect: Buildings construct 25% faster + (Intelligence × 0.5%) + (Might × 0.25%)
+  - XP gain: Completing buildings (×building tier)
+- **Production Chains** (economic multipliers)
+  - Effect: Connected buildings gain +15% output + (Intelligence × 0.5%)
+  - XP gain: Creating working production chains
+- **Quality Tools** (work efficiency)
+  - Effect: All workers +20% productivity + (Intelligence × 0.5%)
+  - XP gain: Crafting tool sets (×quality)
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Industrial Planning** (hub optimization)
+  - Effect: Hubs gain +30% total production + (Intelligence × 0.75%)
+  - XP gain: Optimizing hub layouts (×efficiency achieved)
+- **Mass Manufacturing** (scale economics)
+  - Effect: Each workshop beyond first adds +10% to all production + (Intelligence × 0.5%)
+  - XP gain: Running 5+ workshops simultaneously
+- **Salvage Operations** (resource recovery)
+  - Effect: Recover 50% materials from any source + (Might × 0.5%)
+  - XP gain: Salvaging ruins and wrecks (×value recovered)
+
+**Tier 3 Skills (Ranks 7-10):**
+- **Economic Engine** (production dominance)
+  - Effect: All production buildings +40% output + (Intelligence × 1.0%)
+  - XP gain: Producing 1000+ goods per cycle
+- **Architectural Mastery** (unique structures)
+  - Effect: Unlock faction-unique buildings with special bonuses + (Intelligence × 0.75%) + (Might × 0.25%)
+  - XP gain: Creating architectural wonders
+
+**Synergies:**
+- **"Infrastructure Synergy"**
+  - Requirement: Both skills at Rank 5+ (Craftsmanship + Governance)
+  - Effect: Each Tier 2+ building provides +5% output to adjacent buildings
+  - Stacking: Max 5 neighbors = +25% to central building
+  - Layout matters: Optimized hub design becomes crucial
+- Craftsmanship + Trading: "Supply Chain Mastery" - Vertical integration bonuses
+
+---
+### 6. TRADING (Guile + Willpower)
+*Context: Economic warfare and wealth generation matching military power*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **Market Analysis** (price knowledge)
+  - Effect: See true values, buy/sell spread reduced by 20% + (Guile × 0.75%) + (Willpower × 0.25%)
+  - XP gain: Profitable trades (×profit margin)
+- **Caravan Logistics** (trade efficiency)
+  - Effect: Caravans +25% speed, +20% capacity + (Guile × 0.5%)
+  - XP gain: Completing trade routes (×distance)
+- **Negotiation Tactics** (better deals)
+  - Effect: All prices improved by 15% + (Willpower × 0.5%)
+  - XP gain: Successful negotiations (×deal value)
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Market Monopoly** (price control)
+  - Effect: Control 50% of a good = set prices ±30% + (Willpower × 0.75%)
+  - XP gain: Cornering markets (×market size)
+- **Trade Networks** (passive income)
+  - Effect: Each trade route generates +50 resources/cycle + (Guile × 0.75%)
+  - XP gain: Maintaining multiple routes
+- **Companion Merchants** (specialized traders)
+  - Effect: Companions running caravans gain +30% profit + (Guile × 0.5%)
+  - XP gain: Companion trade missions
+
+**Tier 3 Skills (Ranks 7-10):**
+- **"Economic Dominance"** (wealth supremacy)
+  - Effect: All trade income +50%; controlling 50%+ of any good allows price manipulation ±50% + (Guile × 1.0%) + (Willpower × 0.5%)
+  - Mechanics: Buy at -50% market price, sell at +50% market price
+  - Limitations: Max 3 goods can be monopolized simultaneously
+  - XP gain: Maintaining monopolies (×market value)
+- **Merchant Empire** (trade hegemony)
+  - Effect: Instant goods transfer between your hubs + (Willpower × 0.75%)
+  - XP gain: Operating 10+ simultaneous trade routes
+
+**Synergy:**
+- **"Smuggling Empire"**
+  - Requirement: Trading Rank 5+, Criminality Rank 5+
+  - Effect: Illegal goods sell at legal prices; legal goods can be "laundered" for +30% value
+  - Risk: 5% chance per cycle of major faction crackdown
+
+---
+### 7. GOVERNANCE (Willpower + Intelligence)
+*Context: Hub management and population control with economic power equal to combat*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **Civil Administration** (basic efficiency)
+  - Effect: Hub efficiency +20% + (Intelligence × 0.5%) + (Willpower × 0.25%)
+  - XP gain: Managing hubs at 80%+ efficiency (×population)
+- **Tax Optimization** (revenue without revolt)
+  - Effect: +25% tax income, no happiness penalty + (Willpower × 0.5%)
+  - XP gain: Collecting taxes from happy citizens
+- **Urban Development** (space efficiency)
+  - Effect: Buildings use 15% less space, can build 20% more + (Intelligence × 0.5%)
+  - XP gain: Maximizing hub capacity
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Population Engineering** (demographic control)
+  - Effect: +30% population growth, -20% food consumption + (Intelligence × 0.75%)
+  - XP gain: Growing population past thresholds (×growth rate)
+- **Specialized Economy** (production focus)
+  - Effect: Choose specialization: one industry +50% output + (Intelligence × 0.5%)
+  - XP gain: Maintaining specialization efficiency
+- **Companion Governors** (delegated control)
+  - Effect: Companions governing hubs add +25% to all production + (Willpower × 0.5%)
+  - XP gain: Companion governance success
+
+**Tier 3 Skills (Ranks 7-10):**
+- **"Administrative Empire"** (multi-hub mastery)
+  - Effect: All governed hubs +40% base efficiency + (Intelligence × 1.0%)
+  - Stacking: MULTIPLICATIVE with other bonuses
+  - Formula: `base × 1.4` (this skill) `× other_bonuses`
+  - XP gain: Governing 5+ hubs simultaneously
+- **"Social Architecture"** (population perfection)
+  - Effect: At 95%+ happiness, production +30% + (Willpower × 0.75%)
+  - Stacking: MULTIPLICATIVE with Administrative Empire
+  - Formula: `base × 1.4` (admin) `× 1.3` (happiness) `= 1.82×` total
+  - Cap: Combined governance bonuses cannot exceed `2.0×` base
+  - XP gain: Maintaining 95%+ happiness (×population)
+
+**Synergy Notes:**
+- Governance + Religion: "Theocratic Efficiency" - Faith provides +20% productivity
+- Governance + Leadership: "Delegation Network" - Companions govern autonomously
+
+---
+### 8. LEADERSHIP (Might + Willpower)
+*Context: Army command, companion management, and morale systems*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **Command Authority** (basic leadership)
+  - Effect: Troop morale +15 baseline + (Willpower × 0.75%) + (Might × 0.25%)
+  - XP gain: Maintaining high morale in combat (×battle intensity)
+- **Companion Delegation** (task management)
+  - Effect: Can assign 3 companions simultaneously + (Willpower × 0.5%)
+  - XP gain: Successful companion missions (×difficulty)
+- **Battlefield Inspiration** (morale recovery)
+  - Effect: Restore 30 morale mid-battle + (Might × 0.5%)
+  - XP gain: Rallying from near-defeat
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Strategic Coordination** (multi-army control)
+  - Effect: Can coordinate 2 armies in same battle + (Might × 0.75%)
+  - XP gain: Winning coordinated battles (×complexity)
+- **Officer Corps** (companion enhancement)
+  - Effect: Companions gain +40% leadership effectiveness + (Willpower × 0.5%)
+  - XP gain: Training companion leaders
+- **Unwavering Loyalty** (morale immunity)
+  - Effect: Troops never desert, fight at 75% even at 0 morale + (Willpower × 0.75%)
+  - XP gain: Winning with demoralized troops
+
+**Tier 3 Skills (Ranks 7-10):**
+- **Supreme Commander** (military dominance)
+  - Effect: All armies +30% effectiveness when you command + (Might × 1.0%) + (Willpower × 0.5%)
+  - XP gain: Commanding 500+ total troops
+- **"Legendary General"** (mythic status)
+  - Effect: When personally commanding, enemies lose 5 morale per combat round + (Willpower × 0.75%); routing threshold lowered by 20
+  - Trigger: Only when YOU command (not companions)
+  - Limitations: Once per battle, doesn't stack with other morale effects
+  - XP gain: Routing armies 2× your size (×size differential)
+
+**Synergy Notes:**
+- Leadership + Melee: "Frontline General" - Leading from front adds morale
+- Leadership + Diplomacy: "Coalition Commander" - Allied armies fight better
+
+---
+### 9. DIPLOMACY (Guile + Willpower)
+*Context: Faction relationships and political manipulation*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **First Contact** (initial relations)
+  - Effect: +25 starting reputation with new factions + (Willpower × 0.5%) + (Guile × 0.25%)
+  - XP gain: Peaceful first meetings (×faction power)
+- **Treaty Negotiation** (agreement crafting)
+  - Effect: Can make deals at -15 reputation threshold + (Guile × 0.5%)
+  - XP gain: Successful treaties (×complexity)
+- **Cultural Adaptation** (faction understanding)
+  - Effect: +20% reputation gains, -20% reputation losses + (Willpower × 0.5%)
+  - XP gain: Learning faction customs
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Alliance Architecture** (coalition building)
+  - Effect: Maintain 4 simultaneous alliances + (Willpower × 0.75%)
+  - XP gain: Keeping alliances stable (×duration)
+- **Conflict Mediation** (peace broker)
+  - Effect: Can negotiate ceasefires between factions + (Guile × 0.75%)
+  - XP gain: Preventing wars (×faction animosity)
+- **Information Networks** (diplomatic intel)
+  - Effect: See all faction relationships and plans + (Guile × 0.5%)
+  - XP gain: Gathering diplomatic intelligence
+
+**Tier 3 Skills (Ranks 7-10):**
+- **"Political Leverage"** (faction influence)
+  - Effect: Force one faction decision + (Guile × 0.75%) + (Willpower × 0.25%)
+  - Cooldown: 5 cycles (can't influence same faction)
+  - Resistance: Target resists with (their_willpower - your_combined_stats)
+  - XP gain: Successfully changing faction behavior (×importance)
+- **Master Diplomat** (relationship perfection)
+  - Effect: Maximum reputation provides trade/military bonuses + (Willpower × 1.0%)
+  - XP gain: Achieving allied status with 5+ factions
+
+**Synergy Notes:**
+- Diplomacy + Espionage: "Embassy Cover" - Spies can't be detected
+- Diplomacy + Trading: "Trade Cartels" - Exclusive economic zones
+
+---
+### 10. CRIMINALITY (Guile + Might)
+*Context: Theft and sabotage with capped income potential*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **Petty Theft** (resource stealing)
+  - Effect: Steal 5-10 resources per target, max 50/cycle per hub + (Guile × 0.75%) + (Might × 0.25%)
+  - XP gain: Successful thefts (×target wealth)
+- **Breaking & Entering** (infiltration)
+  - Effect: Access locked buildings, 20% chance for bonus loot + (Guile × 0.5%)
+  - XP gain: Infiltrating secure locations (×security level)
+- **Protection Racket** (extortion)
+  - Effect: NPCs pay 2-5 resources/cycle, max 100/hub + (Might × 0.75%)
+  - XP gain: Establishing rackets (×resistance faced)
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Heist Coordination** (major theft)
+  - Effect: One heist per cycle: steal 200-500 resources + (Guile × 0.75%)
+  - XP gain: Pulling off heists (×target value)
+- **Sabotage Operations** (economic damage)
+  - Effect: Reduce target hub production by 30% for 5 cycles + (Might × 0.75%)
+  - XP gain: Successful sabotage (×hub importance)
+- **Black Market Access** (illegal goods)
+  - Effect: Connected hubs generate 25 criminal income/cycle + (Guile × 0.5%)
+  - XP gain: Establishing black markets
+
+**Tier 3 Skills (Ranks 7-10):**
+- **Criminal Syndicate** (organized crime)
+  - Effect: All criminal activities +50% profit, max 500/hub/cycle + (Guile × 1.0%)
+  - XP gain: Controlling regional crime
+- **"Infrastructure Sabotage"** (crippling attacks)
+  - Effect: Disable one building type in target faction for 10 cycles
+  - Cooldown: 15 cycles (global cooldown)
+  - Cost: 500 resources + requires 3 active spies in target faction
+  - Detection: 30% chance target discovers who did it
+  - XP gain: Successfully crippling economies (×target strength)
+
+**Synergy Notes:**
+- Criminality + Trading: "Smuggling Networks" - Move illegal goods legally
+- Criminality + Governance: "Corrupt Officials" - Steal from own hubs efficiently
+
+---
+### 11. ESPIONAGE (Guile + Intelligence)
+*Context: Information warfare and covert operations*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **Spy Placement** (agent infiltration)
+  - Effect: Place 2 spies per faction + (Guile × 0.5%) + (Intelligence × 0.25%)
+  - XP gain: Successfully infiltrating (×faction security)
+- **Intelligence Gathering** (information collection)
+  - Effect: Spies report faction resources, armies, plans + (Intelligence × 0.5%)
+  - XP gain: Gathering actionable intel (×value)
+- **Secure Communications** (spy safety)
+  - Effect: Spies have 75% reduced detection chance + (Guile × 0.5%)
+  - XP gain: Maintaining spy networks
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Double Agents** (turned enemies)
+  - Effect: 30% chance to turn enemy spies + (Intelligence × 0.75%)
+  - XP gain: Converting enemy agents (×agent skill)
+- **Surveillance State** (total observation)
+  - Effect: See all activity in infiltrated hubs + (Intelligence × 0.5%)
+  - XP gain: Maintaining surveillance networks
+- **Counter-Intelligence** (spy hunting)
+  - Effect: Detect and eliminate enemy spies in your territory + (Guile × 0.75%)
+  - XP gain: Catching spies (×spy skill level)
+
+**Tier 3 Skills (Ranks 7-10):**
+- **"Intelligence Supremacy"** (information dominance)
+  - Effect: Can place 5 spies per faction; perfect information on infiltrated factions + (Intelligence × 1.0%)
+  - Cost: 50 resources/cycle per active spy (scales with # of spies)
+  - Counterplay: Enemy Counter-Intel has 25% chance to detect (reduced from 50%)
+  - Limitations: Max 20 total spies across all factions
+  - XP gain: Maintaining 15+ active spies (×information value)
+- **False Flag Operations** (manufactured conflict)
+  - Effect: Can frame factions for attacks, 60% believability + (Guile × 0.75%) + (Intelligence × 0.25%)
+  - XP gain: Starting wars between enemies
+
+**Synergy Notes:**
+- Espionage + Diplomacy: "Diplomatic Immunity" - Spies operate openly
+- Espionage + Leadership: "Spy Companions" - Companions become master spies
+
+---
+### 12. RELIGION (Willpower + Intelligence)
+*Context: Faith-based loyalty and population control with clear conversion mechanics*
+
+**Tier 1 Skills (Ranks 1-3):**
+- **Basic Preaching** (conversion)
+  - Effect: Convert 5% of non-faithful per cycle + (Willpower × 0.75%) + (Intelligence × 0.25%)
+  - XP gain: Converting populations (×resistance level)
+- **Religious Doctrine** (faith benefits)
+  - Effect: Faithful citizens +15% productivity + (Intelligence × 0.5%)
+  - XP gain: Developing religious texts
+- **Community Rituals** (happiness through faith)
+  - Effect: Faithful population +20 happiness + (Willpower × 0.5%)
+  - XP gain: Performing ceremonies (×attendance)
+
+**Tier 2 Skills (Ranks 4-6):**
+- **Missionary Expeditions** (spreading faith)
+  - Effect: Passive 2% conversion in all connected hubs + (Willpower × 0.75%)
+  - XP gain: Establishing missions (×distance)
+- **Religious Law** (theocratic control)
+  - Effect: Faithful ignore -30 happiness from policies + (Intelligence × 0.5%)
+  - XP gain: Implementing religious governance
+- **Martyrdom Culture** (sacrifice benefits)
+  - Effect: Each faithful death converts 10 more citizens + (Willpower × 0.75%)
+  - XP gain: Creating martyrs in conflicts
+
+**Tier 3 Skills (Ranks 7-10):**
+- **Divine Authority** (religious supremacy)
+  - Effect: Convert 20% per cycle, max 95% faithful + (Willpower × 1.0%)
+  - XP gain: Converting entire hubs
+- **Holy Crusade** (religious warfare)
+  - Effect: Faithful armies +40% combat effectiveness + (Willpower × 0.75%) + (Intelligence × 0.25%)
+  - XP gain: Winning religious wars
+- **"Divine Intervention"** (crisis prevention)
+  - Effect: Prevent one disaster (famine, plague, invasion) + (Intelligence × 0.75%)
+  - Cooldown: 10 cycles
+  - Trigger: Can activate when disaster warning appears
+  - XP gain: Preventing major disasters (×lives saved)
+
+**Synergy Notes:**
+- Religion + Leadership: "Divine Mandate" - Unbreakable loyalty
+- Religion + Governance: "Theocracy" - Perfect obedience through faith
+
+---
+## GLOBAL MECHANICS & RULES
+
+**Stacking Rules:**
+- All percentage bonuses stack MULTIPLICATIVELY unless specified
+  `final_value = base × bonus1 × bonus2 × bonus3`
+- Flat bonuses stack ADDITIVELY
+  `final_value = base + flat1 + flat2 + flat3`
+- Mixed stacking
+  `final_value = (base + flat_bonuses) × multiplicative_bonuses`
+
+**Cooldown Standards:**
+- Tier 1: No cooldowns (weak effects)
+- Tier 2: 3-5 cycle cooldowns for powerful abilities
+- Tier 3: 5-15 cycle cooldowns for game-changing effects
+
+**Cost Scaling:**
+- Passive abilities: No cost
+- Active abilities: Resource cost = 10 × skill_rank × power_multiplier
+- Maintenance: Ongoing effects cost resources/cycle
+
+**XP Gain Formula:**
+`xp_gained = base_xp × difficulty_multiplier × achievement_multiplier`
+- **difficulty_multiplier:**
+  - trivial: 0.5
+  - normal: 1.0
+  - hard: 2.0
+  - legendary: 5.0
+- **achievement_multiplier:**
+  - first_time: 2.0
+  - perfect_execution: 1.5
+  - under_pressure: 1.5
+  - normal: 1.0
+
+**Cycle Definitions:**
+- 1 cycle = 1 in-game day
+- Most effects last 5-10 cycles
+- Cooldowns prevent spam
+
+**Hub Population Scales:**
+- Small hub: 50-100 citizens
+- Medium hub: 100-500 citizens
+- Large hub: 500-1000 citizens
+- Capital: 1000+ citizens
+
+**Companion Integration:**
+- Companions can lead armies (Leadership bonus)
+- Companions can govern hubs (Governance bonus)
+- Companions can run caravans (Trading bonus)
+- Companions can be spies (Espionage bonus)
+
+---
+## CODE STYLE
+- Follow CLAUDE.md exactly:
+  * Use `class_name` for all scripts (never preload scripts)
+  * Type everything explicitly
+  * Use `StringName` for IDs
+  * Private variables with `_` prefix
+  * Document complex functions with `##`
+  * Use `@export` for Resources
+  * No debug prints (except in explicit `_debug` methods)
+
+---
+## RESOURCES & FILES
+Create these files:
+
+**Scripts:**
+- `res://Characters/CharacterAttributes.gd`
+- `res://Characters/SkillSpec.gd` (extends Resource, `class_name`)
+- `res://Characters/CharacterProgression.gd`
+- `res://Characters/DomainSpec.gd` (extends Resource, `class_name`)
+- `res://Characters/XPCalculator.gd` (extends Node, all static funcs)
+
+**Resources (12 .tres files):**
+- `res://data/Domains/Melee.tres`
+- `res://data/Domains/Ranged.tres`
+- ... (all 12 domains)
+
+Start with the scripts. Resources can be created in-editor after.
+
+---
+## TEST OUTPUT
+At the end of `CharacterProgression.gd`, include a `_test_progression()` method that prints:
+- Creating attributes (Might, Guile, Intellect, Willpower all at level 1)
+- Granting skill XP and showing attribute distribution
+- One example of each modifier (difficulty, challenge, level penalty)
+Format as commented code, don't execute by default.
+
+---
+## IMPORTANT CONSTRAINTS
+- For attribute XP split, default to 50/50 split to both attributes (we'll make it domain-aware in phase 2)
+- `XPCalculator` should be PURE MATH (no references to game state)
+- `CharacterProgression` orchestrates, `XPCalculator` calculates
+- All coefficients from our design doc exactly (0.75, 0.25, 0.5, 1.2 multiplier, etc)

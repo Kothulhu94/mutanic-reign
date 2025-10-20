@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3 uid="uid://salve_item_001"]
+
+[ext_resource type="Script" uid="uid://s1txlrx5unui" path="res://data/Items/ItemDef.gd" id="1_salve"]
+
+[resource]
+script = ExtResource("1_salve")
+id = &"Salve"
+display_name = "Salve"
+tags = Array[StringName]([tags = Array[StringName]([&"medical", &"processed"])"medical", tags = Array[StringName]([&"medical", &"processed"])"extract", tags = Array[StringName]([&"medical", &"processed"])"processed"])
+base_price = 13.0
+metadata/_custom_type_script = "uid://s1txlrx5unui"

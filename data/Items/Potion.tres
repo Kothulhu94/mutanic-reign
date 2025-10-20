@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3 uid="uid://potion_item_001"]
+
+[ext_resource type="Script" uid="uid://s1txlrx5unui" path="res://data/Items/ItemDef.gd" id="1_potion"]
+
+[resource]
+script = ExtResource("1_potion")
+id = &"Potion"
+display_name = "Potion"
+tags = Array[StringName]([tags = Array[StringName]([&"medical", &"processed"])"medical", tags = Array[StringName]([&"medical", &"processed"])"brewed", tags = Array[StringName]([&"medical", &"processed"])"processed"])
+base_price = 36.0
+metadata/_custom_type_script = "uid://s1txlrx5unui"

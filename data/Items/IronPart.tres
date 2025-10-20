@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3 uid="uid://ironpart_item_001"]
+
+[ext_resource type="Script" uid="uid://s1txlrx5unui" path="res://data/Items/ItemDef.gd" id="1_ironpart"]
+
+[resource]
+script = ExtResource("1_ironpart")
+id = &"IronPart"
+display_name = "Iron Part"
+tags = Array[StringName]([&"material", &"crafted", &"processed"])
+base_price = 30.0
+metadata/_custom_type_script = "uid://s1txlrx5unui"

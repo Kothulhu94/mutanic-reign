@@ -4,7 +4,7 @@
 # Buys preferred items at home, travels to other hubs to sell for profit
 # Returns home to pay 10% tax and restock if surplus exists
 extends Area2D
-class_name Caravan
+class_name CaravanNode
 
 # Core state
 var caravan_state: CaravanState = null

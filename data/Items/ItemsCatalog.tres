@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="ItemDB" load_steps=11 format=3 uid="uid://dpu7dor4326r3"]
+[gd_resource type="Resource" script_class="ItemDB" load_steps=34 format=3 uid="uid://dpu7dor4326r3"]
 
 [ext_resource type="Resource" uid="uid://cttkx1kfbqtg3" path="res://data/Items/Wheat.tres" id="1_cy0fy"]
 [ext_resource type="Script" uid="uid://k0oeo8cvtysn" path="res://data/Items/ItemDB.gd" id="1_ofils"]
@@ -10,16 +10,66 @@
 [ext_resource type="Resource" uid="uid://ctw3a07dvimsb" path="res://data/Items/Cotton.tres" id="7_p027r"]
 [ext_resource type="Resource" uid="uid://unpxmbuk5l84" path="res://data/Items/Coffee.tres" id="8_nqmmg"]
 [ext_resource type="Resource" uid="uid://bsr1hueklq88j" path="res://data/Items/WheatBread.tres" id="9_petay"]
+[ext_resource type="Resource" uid="uid://corn_item_001" path="res://data/Items/Corn.tres" id="10_corn"]
+[ext_resource type="Resource" uid="uid://fish_item_001" path="res://data/Items/Fish.tres" id="11_fish"]
+[ext_resource type="Resource" uid="uid://iron_item_001" path="res://data/Items/Iron.tres" id="12_iron"]
+[ext_resource type="Resource" uid="uid://lumber_item_001" path="res://data/Items/Lumber.tres" id="13_lumber"]
+[ext_resource type="Resource" uid="uid://herbs_item_001" path="res://data/Items/Herbs.tres" id="14_herbs"]
+[ext_resource type="Resource" uid="uid://medicinalmushroom_item_001" path="res://data/Items/MedicinalMushroom.tres" id="15_mushroom"]
+[ext_resource type="Resource" uid="uid://gemstone_item_001" path="res://data/Items/Gemstone.tres" id="16_gemstone"]
+[ext_resource type="Resource" uid="uid://spice_item_001" path="res://data/Items/Spice.tres" id="17_spice"]
+[ext_resource type="Resource" uid="uid://cornbread_item_001" path="res://data/Items/CornBread.tres" id="18_cornbread"]
+[ext_resource type="Resource" uid="uid://smokedfish_item_001" path="res://data/Items/SmokedFish.tres" id="19_smokedfish"]
+[ext_resource type="Resource" uid="uid://steelbar_item_001" path="res://data/Items/IronBar.tres" id="20_ironbar"]
+[ext_resource type="Resource" uid="uid://plank_item_001" path="res://data/Items/Plank.tres" id="21_plank"]
+[ext_resource type="Resource" uid="uid://potion_item_001" path="res://data/Items/Potion.tres" id="22_potion"]
+[ext_resource type="Resource" uid="uid://mushroomextract_item_001" path="res://data/Items/MushroomExtract.tres" id="23_mushroomextract"]
+[ext_resource type="Resource" uid="uid://jewelry_item_001" path="res://data/Items/Jewelry.tres" id="24_jewelry"]
+[ext_resource type="Resource" uid="uid://groundspice_item_001" path="res://data/Items/GroundSpice.tres" id="25_groundspice"]
+[ext_resource type="Resource" uid="uid://brick_item_001" path="res://data/Items/Brick.tres" id="26_brick"]
+[ext_resource type="Resource" uid="uid://metalpart_item_001" path="res://data/Items/ScrapPart.tres" id="27_scrappart"]
+[ext_resource type="Resource" uid="uid://hempoil_item_001" path="res://data/Items/HempOil.tres" id="28_hempoil"]
+[ext_resource type="Resource" uid="uid://salve_item_001" path="res://data/Items/Salve.tres" id="29_salve"]
+[ext_resource type="Resource" uid="uid://fabric_item_001" path="res://data/Items/Fabric.tres" id="30_fabric"]
+[ext_resource type="Resource" uid="uid://beverage_item_001" path="res://data/Items/BrewedCoffee.tres" id="31_brewedcoffee"]
+[ext_resource type="Resource" uid="uid://ironpart_item_001" path="res://data/Items/IronPart.tres" id="32_ironpart"]
+[ext_resource type="Resource" uid="uid://ethanol_item_001" path="res://data/Items/Ethanol.tres" id="33_ethanol"]
+[ext_resource type="Resource" uid="uid://beer_item_001" path="res://data/Items/Beer.tres" id="34_beer"]
 
 [resource]
 script = ExtResource("1_ofils")
 items = {
 &"Aloe": ExtResource("4_nqmmg"),
+&"Beer": ExtResource("34_beer"),
+&"BrewedCoffee": ExtResource("31_brewedcoffee"),
+&"Brick": ExtResource("26_brick"),
 &"Coffee": ExtResource("8_nqmmg"),
+&"Corn": ExtResource("10_corn"),
+&"CornBread": ExtResource("18_cornbread"),
 &"Cotton": ExtResource("7_p027r"),
+&"Ethanol": ExtResource("33_ethanol"),
+&"Fabric": ExtResource("30_fabric"),
+&"Fish": ExtResource("11_fish"),
+&"Gemstone": ExtResource("16_gemstone"),
+&"GroundSpice": ExtResource("25_groundspice"),
 &"Hemp": ExtResource("3_qkibh"),
+&"HempOil": ExtResource("28_hempoil"),
+&"Herbs": ExtResource("14_herbs"),
+&"Iron": ExtResource("12_iron"),
+&"IronBar": ExtResource("20_ironbar"),
+&"IronPart": ExtResource("32_ironpart"),
+&"Jewelry": ExtResource("24_jewelry"),
+&"Lumber": ExtResource("13_lumber"),
+&"MedicinalMushroom": ExtResource("15_mushroom"),
+&"MushroomExtract": ExtResource("23_mushroomextract"),
+&"Plank": ExtResource("21_plank"),
+&"Potion": ExtResource("22_potion"),
 &"RabbitMeat": ExtResource("2_xdey0"),
+&"Salve": ExtResource("29_salve"),
 &"Scrap": ExtResource("6_8tqx4"),
+&"ScrapPart": ExtResource("27_scrappart"),
+&"SmokedFish": ExtResource("19_smokedfish"),
+&"Spice": ExtResource("17_spice"),
 &"Stone": ExtResource("5_petay"),
 &"Wheat": ExtResource("1_cy0fy"),
 &"WheatBread": ExtResource("9_petay")

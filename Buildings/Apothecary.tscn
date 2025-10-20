@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://apothecary001"]
+[gd_scene load_steps=3 format=3 uid="uid://pothecary001"]
 
 [ext_resource type="Script" path="res://Buildings/Apothecary.gd" id="1_apothecary"]
 [ext_resource type="Resource" uid="uid://dpu7dor4326r3" path="res://data/Items/ItemsCatalog.tres" id="2_apothecary_db"]

@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://herbgarden001"]
+[gd_scene load_steps=2 format=3 uid="uid://djdft7t3tg5aa"]
 
 [ext_resource type="Script" path="res://Buildings/HerbGarden.gd" id="1_herbgarden"]
 

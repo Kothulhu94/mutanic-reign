@@ -1,5 +1,7 @@
 extends Node
 signal tick(step: float)
+signal paused()
+signal resumed()
 
 const TICK_RATE := 10.0
 const TICK_STEP := 1.0 / TICK_RATE
@@ -17,3 +19,15 @@ func _process(delta: float) -> void:
 		_accum -= TICK_STEP
 		tick.emit(TICK_STEP)
 	# anyone can listen to this
+
+## Pauses the game time
+func pause() -> void:
+	if running:
+		running = false
+		paused.emit()
+
+## Resumes the game time
+func resume() -> void:
+	if not running:
+		running = true
+		resumed.emit()

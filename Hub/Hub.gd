@@ -4,9 +4,16 @@ class_name Hub
 
 @export var state: HubStates
 
+# UI references
+@export var hub_menu_ui: HubMenuUI = null
+@export var market_ui: MarketUI = null
+
 # Backing fields for exported props
 var _item_db: ItemDB
 var _economy_config: EconomyConfig
+
+# Track if hub has been visited by player
+var _has_been_visited: bool = false
 
 # Exported properties with setters so runtime/editor changes rewire the engine
 @export var item_db: ItemDB:
@@ -73,6 +80,19 @@ func _ready() -> void:
 			click_and_fade.actor_entered.connect(_on_actor_entered)
 		if click_and_fade.has_signal("actor_exited"):
 			click_and_fade.actor_exited.connect(_on_actor_exited)
+		if click_and_fade.has_signal("hub_clicked"):
+			click_and_fade.hub_clicked.connect(_on_hub_clicked)
+
+	# Connect UI signals
+	if hub_menu_ui != null:
+		if hub_menu_ui.has_signal("menu_closed"):
+			hub_menu_ui.menu_closed.connect(_on_menu_closed)
+		if hub_menu_ui.has_signal("market_opened"):
+			hub_menu_ui.market_opened.connect(_on_market_opened)
+
+	if market_ui != null:
+		if market_ui.has_signal("market_closed"):
+			market_ui.market_closed.connect(_on_market_closed)
 
 func _on_timekeeper_tick(dt: float) -> void:
 	# Gather buildings list
@@ -221,10 +241,47 @@ func sell_to_hub(item_id: StringName, amount: int, _caravan_state: CaravanState)
 # -------------------------------------------------------------------
 # Area callbacks (optional)
 # -------------------------------------------------------------------
-func _on_actor_entered(_actor: Node) -> void:
-	pass
+func _on_actor_entered(actor: Node) -> void:
+	# Check if it's the Bus entering for the first time
+	if not _has_been_visited and _is_bus(actor):
+		_has_been_visited = true
+		_show_hub_menu()
 
 func _on_actor_exited(_actor: Node) -> void:
+	pass
+
+func _on_hub_clicked() -> void:
+	# Show menu when hub is clicked directly
+	_show_hub_menu()
+
+# -------------------------------------------------------------------
+# UI Management
+# -------------------------------------------------------------------
+func _is_bus(node: Node) -> bool:
+	if node == null:
+		return false
+	return node.get_scene_file_path() == "res://Actors/Bus.tscn"
+
+func _show_hub_menu() -> void:
+	if hub_menu_ui == null:
+		push_warning("Hub %s has no HubMenuUI assigned" % name)
+		return
+
+	hub_menu_ui.open_menu(self)
+
+func _on_menu_closed() -> void:
+	# Menu closed, game resumed automatically by HubMenuUI
+	pass
+
+func _on_market_opened() -> void:
+	if market_ui == null:
+		push_warning("Hub %s has no MarketUI assigned" % name)
+		return
+
+	market_ui.open_market(self)
+
+func _on_market_closed() -> void:
+	# Market closed, game resumed automatically by MarketUI
 	pass
 
 # -------------------------------------------------------------------

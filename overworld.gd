@@ -29,6 +29,7 @@ var bus: CharacterBody2D
 var cam: Camera2D
 var _agent: NavigationAgent2D
 var _path_world: PackedVector2Array = PackedVector2Array()
+var _is_paused: bool = false
 @onready var path_line: Line2D = get_node_or_null("PathLine")
 
 func _ready() -> void:
@@ -79,6 +80,14 @@ func _ready() -> void:
 			load("res://data/Caravans/MedicalTrader.tres")
 		]
 
+	# Connect to Timekeeper pause/resume signals
+	var timekeeper: Node = get_node_or_null("/root/Timekeeper")
+	if timekeeper != null:
+		if timekeeper.has_signal("paused"):
+			timekeeper.paused.connect(_on_timekeeper_paused)
+		if timekeeper.has_signal("resumed"):
+			timekeeper.resumed.connect(_on_timekeeper_resumed)
+
 func _process(delta: float) -> void:
 	# Update caravan spawn timer
 	caravan_spawn_timer += delta
@@ -93,6 +102,10 @@ func _physics_process(_delta: float) -> void:
 	_update_line2d_from_world_path()
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Ignore input when game is paused (UI is open)
+	if _is_paused:
+		return
+
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
@@ -361,3 +374,12 @@ func _get_all_hubs() -> Array[Hub]:
 		if child is Hub:
 			hubs.append(child as Hub)
 	return hubs
+
+# -------------------------------------------------------------------
+# Pause/Resume Callbacks
+# -------------------------------------------------------------------
+func _on_timekeeper_paused() -> void:
+	_is_paused = true
+
+func _on_timekeeper_resumed() -> void:
+	_is_paused = false

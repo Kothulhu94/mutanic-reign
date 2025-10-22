@@ -1,8 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://fishfarm001"]
-
-[ext_resource type="Script" path="res://Buildings/FishFarm.gd" id="1_fishfarm"]
-
-[node name="FishFarm" type="Node2D"]
-script = ExtResource("1_fishfarm")
-
-[node name="Sprite2D" type="Sprite2D" parent="."]

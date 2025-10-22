@@ -19,7 +19,7 @@ const NAV_LAYERS: int = 1  # keep in lockstep with the NavigationAgent2D
 @export var caravan_types: Array[CaravanType] = []
 @export var caravan_spawn_interval: float = 30.0  # Check for spawning every 30 seconds
 var caravan_spawn_timer: float = 0.0
-var active_caravans: Array[CaravanNode] = []
+var active_caravans: Array[Caravan] = []
 
 # Track threshold multipliers per hub per caravan type
 # Key format: "hub_id:caravan_type_id" -> multiplier
@@ -330,7 +330,7 @@ func _spawn_caravan(home_hub: Hub, caravan_type: CaravanType, all_hubs: Array[Hu
 	if caravan_scene == null:
 		return
 
-	var caravan: CaravanNode = caravan_scene.instantiate() as CaravanNode
+	var caravan: Caravan = caravan_scene.instantiate() as Caravan
 	if caravan == null:
 		return
 
@@ -358,7 +358,7 @@ func _spawn_caravan(home_hub: Hub, caravan_type: CaravanType, all_hubs: Array[Hu
 	# Connect cleanup signal when caravan is freed
 	caravan.tree_exited.connect(_on_caravan_removed.bind(caravan))
 
-func _on_caravan_removed(caravan: CaravanNode) -> void:
+func _on_caravan_removed(caravan: Caravan) -> void:
 	active_caravans.erase(caravan)
 
 	# Reset threshold multiplier when caravan is destroyed (e.g., combat)

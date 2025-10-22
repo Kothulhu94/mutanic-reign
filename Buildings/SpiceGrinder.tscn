@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://dgp2b3klj6eb5"]
+[gd_scene load_steps=3 format=3 uid="uid://spicegrinder001"]
 
 [ext_resource type="Script" path="res://Buildings/SpiceGrinder.gd" id="1_spicegrinder"]
 [ext_resource type="Resource" uid="uid://dpu7dor4326r3" path="res://data/Items/ItemsCatalog.tres" id="2_spicegrinder_db"]

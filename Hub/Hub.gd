@@ -270,10 +270,16 @@ func _show_hub_menu() -> void:
 	hub_menu_ui.open_menu(self)
 
 func _on_menu_closed() -> void:
-	# Menu closed, game resumed automatically by HubMenuUI
-	pass
+	# Only respond if this hub was the one that opened the menu
+	if hub_menu_ui != null and hub_menu_ui.current_hub == self:
+		# Menu closed, game resumed automatically by HubMenuUI
+		pass
 
 func _on_market_opened() -> void:
+	# Only respond if this hub was the one that opened the menu
+	if hub_menu_ui == null or hub_menu_ui.current_hub != self:
+		return
+
 	if market_ui == null:
 		push_warning("Hub %s has no MarketUI assigned" % name)
 		return
@@ -281,8 +287,10 @@ func _on_market_opened() -> void:
 	market_ui.open_market(self)
 
 func _on_market_closed() -> void:
-	# Market closed, game resumed automatically by MarketUI
-	pass
+	# Only respond if this hub was the one that opened the market
+	if market_ui != null and market_ui.current_hub == self:
+		# Market closed, game resumed automatically by MarketUI
+		pass
 
 # -------------------------------------------------------------------
 # Pricing helpers (EMA-based consumption -> dynamic prices)

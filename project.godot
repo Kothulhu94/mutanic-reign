@@ -22,10 +22,10 @@ DebugMenu="*res://addons/debug_menu/debug_menu.tscn"
 BeehaveGlobalMetrics="*res://addons/beehave/metrics/beehave_global_metrics.gd"
 BeehaveGlobalDebugger="*res://addons/beehave/debug/global_debugger.gd"
 Dialogic="*res://addons/dialogic/Core/DialogicGameHandler.gd"
-TurnManager="*res://addons/limboai/godot_gameplay_systems/turn_based/./autoloads/turn_manager.gd"
 GameState="*res://singletons/GameState.gd"
 Timekeeper="*res://singletons/Timekeeper.gd"
 SceneLoader="*res://singletons/SceneLoader.gd"
+TurnManager="*res://addons/limboai/godot_gameplay_systems/turn_based/./autoloads/turn_manager.gd"
 
 [dialogic]
 

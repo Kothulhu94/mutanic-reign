@@ -1,6 +1,6 @@
-[gd_scene load_steps=541 format=3 uid="uid://bn7il32yep7nb"]
+[gd_scene load_steps=542 format=3 uid="uid://bn7il32yep7nb"]
 
-[ext_resource type="Script" path="res://overworld.gd" id="1_overworld"]
+[ext_resource type="Script" uid="uid://c7s2t2bplv8mh" path="res://overworld.gd" id="1_overworld"]
 [ext_resource type="Script" uid="uid://c13gtnisdmqyn" path="res://scripts/chunker.gd" id="2_nyb65"]
 [ext_resource type="Texture2D" uid="uid://nwu1dekjdwcn" path="res://chunks/chunk_0_0.png" id="3_mb8ku"]
 [ext_resource type="Texture2D" uid="uid://sicksodv4up4" path="res://chunks/chunk_1_0.png" id="4_7r4as"]
@@ -261,180 +261,8 @@
 [ext_resource type="Texture2D" uid="uid://cofxxedi1v2a7" path="res://chunks/chunk_15_15.png" id="258_kf6xh"]
 [ext_resource type="Resource" uid="uid://boqebad2qbjwp" path="res://data/Hubs/Oakmill.tres" id="259_vu0qf"]
 [ext_resource type="Resource" uid="uid://cvxcsjomg6ips" path="res://data/Hubs/Stonegrove.tres" id="261_pyulv"]
-[ext_resource type="Script" uid="uid://b2iyabtka0f3x" path="res://Actors/Caravan.gd" id="261_w0vem"]
-[ext_resource type="PackedScene" path="res://UI/HubMenuUI.tscn" id="262_hubmenu"]
-[ext_resource type="PackedScene" path="res://UI/MarketUI.tscn" id="263_marketui"]
-
-[sub_resource type="GDScript" id="GDScript_3kidx"]
-script/source = "extends Node2D
-
-@export var bus_scene: PackedScene = preload(\"res://Actors/Bus.tscn\")
-@export var camera_scene: PackedScene = preload(\"res://Actors/PlayerCamera.tscn\")
-
-@export var map_origin: Vector2 = Vector2.ZERO
-@export var map_size: Vector2 = Vector2(8192, 8192)
-@export var chunk_size: Vector2i = Vector2i(512, 512)
-@export var bus_spawn_point: Vector2 = Vector2(125, 125)
-
-const NAV_LAYERS: int = 1  # keep in lockstep with the NavigationAgent2D
-
-# How close to a waypoint counts as “consumed”
-@export var path_trim_tolerance: float = 12.0
-
-var bus: CharacterBody2D
-var cam: Camera2D
-var _agent: NavigationAgent2D
-var _path_world: PackedVector2Array = PackedVector2Array()
-
-@onready var path_line: Line2D = get_node_or_null(\"PathLine\")
-
-func _ready() -> void:
-	await _await_nav_ready()
-
-	if path_line == null:
-		path_line = Line2D.new()
-		path_line.name = \"PathLine\"
-		path_line.width = 3.0
-		add_child(path_line)
-	path_line.visible = false
-
-	# Spawn Bus.
-	bus = bus_scene.instantiate() as CharacterBody2D
-	add_child(bus)
-
-	# Spawn position snapped to the navmesh (fallback to base if nav has no point).
-	var spawn_base: Vector2 = map_origin + bus_spawn_point
-	var snapped_pos: Vector2 = _snap_to_nav(spawn_base)
-	var final_position: Vector2 = (snapped_pos if snapped_pos != Vector2.ZERO else spawn_base)
-	bus.global_position = final_position
-
-	# Configure agent if present.
-	_agent = bus.get_node_or_null(\"NavigationAgent2D\") as NavigationAgent2D
-	if _agent != null:
-		_agent.navigation_layers = NAV_LAYERS
-		_agent.target_position = final_position
-
-	# Spawn Camera.
-	cam = camera_scene.instantiate() as Camera2D
-	cam.set(\"bus\", bus)
-	cam.set(\"map_origin\", map_origin)
-	cam.set(\"map_size\", map_size)
-	cam.global_position = final_position
-	add_child(cam)
-	cam.enabled = true
-
-func _physics_process(_delta: float) -> void:
-	if bus == null or _path_world.size() == 0 or path_line == null:
-		return
-	_trim_path_as_bus_moves(bus.global_position)
-	_update_line2d_from_world_path()
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		var mb: InputEventMouseButton = event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			if bus == null:
-				return
-
-			# Snap both endpoints to the navmesh.
-			var start_on_nav: Vector2 = _snap_to_nav(bus.global_position)
-			var click_pos: Vector2 = get_global_mouse_position()
-			var target_on_nav: Vector2 = _snap_to_nav(click_pos)
-
-			# Compute post-processed path so it matches what the agent will follow.
-			var world_path: PackedVector2Array = _compute_nav_path(start_on_nav, target_on_nav)
-
-			# Draw and set agent target.
-			_set_path_line(world_path)
-
-			if _agent != null:
-				_agent.navigation_layers = NAV_LAYERS
-				_agent.target_position = target_on_nav
-
-# --- Navigation helpers ---
-
-func _snap_to_nav(p: Vector2) -> Vector2:
-	var nav_map: RID = get_world_2d().navigation_map
-	return NavigationServer2D.map_get_closest_point(nav_map, p)
-
-func _compute_nav_path(start_on_nav: Vector2, target_on_nav: Vector2) -> PackedVector2Array:
-	var params: NavigationPathQueryParameters2D = NavigationPathQueryParameters2D.new()
-	params.map = get_world_2d().navigation_map
-	params.start_position = start_on_nav
-	params.target_position = target_on_nav
-	params.navigation_layers = NAV_LAYERS
-	params.path_postprocessing = NavigationPathQueryParameters2D.PATH_POSTPROCESSING_CORRIDORFUNNEL
-	params.simplify_path = true
-
-	var result: NavigationPathQueryResult2D = NavigationPathQueryResult2D.new()
-	NavigationServer2D.query_path(params, result)
-	return result.path
-
-func _set_path_line(points_world: PackedVector2Array) -> void:
-	# Store the world-space path; Line2D will be updated each physics tick.
-	_path_world = points_world.duplicate()
-	# Hide if empty; show otherwise and ensure the first visual draw happens now.
-	if _path_world.size() <= 1:
-		path_line.points = PackedVector2Array()
-		path_line.visible = false
-	else:
-		path_line.visible = true
-		_update_line2d_from_world_path()
-
-# Trim from the start as the bus moves forward.
-func _trim_path_as_bus_moves(bus_pos_world: Vector2) -> void:
-	# Nothing to trim if we have < 2 points.
-	while _path_world.size() >= 2:
-		var a: Vector2 = _path_world[0]
-		var b: Vector2 = _path_world[1]
-		var v: Vector2 = b - a
-		var len2: float = v.length_squared()
-		if len2 < 0.0001:
-			_path_world.remove_at(0)
-			continue
-
-		# Project bus onto segment AB.
-		var t: float = clamp((bus_pos_world - a).dot(v) / len2, 0.0, 1.0)
-		var proj: Vector2 = a.lerp(b, t)
-
-		# If we have essentially reached/passed B, drop A and continue.
-		if t >= 1.0 or proj.distance_to(b) <= path_trim_tolerance:
-			_path_world.remove_at(0)
-			continue
-
-		# Otherwise, move the start of the path up to the projection point.
-		_path_world[0] = proj
-		break
-
-	# If only one point remains and we're close to it, clear the path entirely.
-	if _path_world.size() == 1:
-		if bus_pos_world.distance_to(_path_world[0]) <= path_trim_tolerance:
-			_path_world.clear()
-
-func _update_line2d_from_world_path() -> void:
-	if path_line == null:
-		return
-	if _path_world.size() <= 1:
-		path_line.points = PackedVector2Array()
-		path_line.visible = false
-		return
-
-	var local: PackedVector2Array = PackedVector2Array()
-	local.resize(_path_world.size())
-	for i in range(_path_world.size()):
-		local[i] = to_local(_path_world[i])
-	path_line.points = local
-	path_line.visible = true
-
-# --- Nav-map readiness guard ---
-
-func _await_nav_ready() -> void:
-	var nav_map: RID = get_world_2d().navigation_map
-	var guard: int = 0
-	while NavigationServer2D.map_get_iteration_id(nav_map) == 0 and guard < 60:
-		await get_tree().process_frame
-		guard += 1
-"
+[ext_resource type="PackedScene" uid="uid://cu7jy8xv5xj0b" path="res://UI/HubMenuUI.tscn" id="262_hubmenu"]
+[ext_resource type="PackedScene" uid="uid://bxn5d8qv2mw5k" path="res://UI/MarketUI.tscn" id="263_marketui"]
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_6mg3q"]
 resource_local_to_scene = true
@@ -4553,13 +4381,13 @@ z_index = 100
 width = 5.0
 default_color = Color(0.8784314, 0.011764706, 0, 1)
 
-[node name="Oakmill" parent="." instance=ExtResource("258_7r4as")]
+[node name="Oakmill" parent="." node_paths=PackedStringArray("hub_menu_ui", "market_ui") instance=ExtResource("258_7r4as")]
 position = Vector2(562.6665, 1986.6665)
 state = ExtResource("259_vu0qf")
 hub_menu_ui = NodePath("../UILayer/HubMenuUI")
 market_ui = NodePath("../UILayer/MarketUI")
 
-[node name="Stonegrove" parent="." instance=ExtResource("258_7r4as")]
+[node name="Stonegrove" parent="." node_paths=PackedStringArray("hub_menu_ui", "market_ui") instance=ExtResource("258_7r4as")]
 position = Vector2(5968, 4281.3335)
 state = ExtResource("261_pyulv")
 hub_menu_ui = NodePath("../UILayer/HubMenuUI")

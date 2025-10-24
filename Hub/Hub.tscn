@@ -16,7 +16,6 @@ item_db = ExtResource("2_1n6xc")
 economy_config = ExtResource("3_4qr5j")
 
 [node name="ClickAndFade" type="Area2D" parent="."]
-input_pickable = true
 collision_layer = 3
 script = ExtResource("2_dmv40")
 

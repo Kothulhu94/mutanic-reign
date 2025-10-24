@@ -91,10 +91,8 @@ static func apply_challenge_modifier(attribute_xp: int, attribute_level: int, ta
 	# Calculate how challenging the task is relative to character's level
 	var challenge_ratio: float = task_difficulty / float(attribute_level)
 
-	# Sweet spot is around 0.8x attribute level (e.g., level 5 doing difficulty 4 tasks)
-	var distance_from_sweet_spot: float = absf(challenge_ratio - CHALLENGE_SWEET_SPOT)
-
 	# Calculate modifier: tasks near sweet spot get bonus, too easy/hard get penalty
+	# Sweet spot is around 0.8x attribute level (e.g., level 5 doing difficulty 4 tasks)
 	var modifier: float
 	if challenge_ratio < CHALLENGE_SWEET_SPOT:
 		# Task is too easy - apply penalty

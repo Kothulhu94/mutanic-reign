@@ -3,7 +3,6 @@ class_name ClickAndFade
 
 signal actor_entered(actor: Node)
 signal actor_exited(actor: Node)
-signal bus_entered_first_time(bus: Node)
 signal hub_clicked()
 
 # Whitelist of actor scenes that should vanish while inside
@@ -20,6 +19,10 @@ func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
 	input_event.connect(_on_input_event)
+
+	# Check for bodies already overlapping at startup
+	for body in get_overlapping_bodies():
+		_on_body_entered(body)
 
 func _on_body_entered(body: Node) -> void:
 	var p := body.get_scene_file_path()

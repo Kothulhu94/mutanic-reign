@@ -58,7 +58,7 @@ func _ready() -> void:
 	level = max(1, level)
 
 # Hub pulls this once per tick. Returns additive delta.
-func refine_tick(hub_inventory: Dictionary) -> Dictionary:
+func refine_tick(hub_inventory: Dictionary, governor_bonus: float = 0.0) -> Dictionary:
 	var result: Dictionary = {}
 	if not enabled:
 		return result
@@ -66,7 +66,7 @@ func refine_tick(hub_inventory: Dictionary) -> Dictionary:
 	# Accumulate work
 	var lvl_mult: float = pow(PER_LEVEL_MULT, float(max(level - 1, 0)))
 	var denom: float = max(0.0001, base_cycle_time_ticks)
-	var outputs_per_tick: float = (output_per_cycle / denom) * efficiency_mult * lvl_mult
+	var outputs_per_tick: float = (output_per_cycle / denom) * efficiency_mult * lvl_mult * (1.0 + governor_bonus)
 	work_progress += outputs_per_tick
 
 	var outputs_ready: int = int(floor(work_progress))

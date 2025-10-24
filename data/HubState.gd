@@ -3,6 +3,7 @@ class_name HubStates
 
 @export var hub_id: StringName
 @export var display_name: String = "Settlement"
+@export var governor_id: StringName = StringName()  # Character ID of assigned governor
 
 @export var money: int = 0
 

@@ -11,6 +11,11 @@ var caravan_state: CaravanState = null
 var home_hub: Hub = null
 var current_target_hub: Hub = null
 
+# Skill-based bonuses (calculated once at setup)
+var _price_modifier_bonus: float = 0.0  # From NegotiationTactics skill
+var _speed_bonus: float = 0.0           # From CaravanLogistics skill
+var _capacity_bonus: float = 0.0        # From CaravanLogistics skill
+
 # AI State machine
 enum State {
 	IDLE,              # Waiting at home hub
@@ -50,6 +55,10 @@ func setup(home: Hub, state: CaravanState, db: ItemDB, hubs: Array[Hub]) -> void
 	caravan_state = state
 	item_db = db
 	all_hubs = hubs
+
+	# Apply skill bonuses if leader has skills
+	if caravan_state != null and caravan_state.leader_sheet != null:
+		_apply_skill_bonuses()
 
 	# Configure navigation from CaravanType
 	if caravan_state.caravan_type != null:
@@ -162,7 +171,11 @@ func _state_evaluating_trade() -> void:
 
 	for item_id: StringName in caravan_state.inventory.keys():
 		var purchase_price: float = purchase_prices.get(item_id, 0.0)
-		var sell_price: float = current_target_hub.get_item_price(item_id)
+		var base_sell_price: float = current_target_hub.get_item_price(item_id)
+
+		# Apply skill bonus: better negotiation = higher effective sell price
+		var price_modifier: float = 1.0 - _price_modifier_bonus
+		var sell_price: float = base_sell_price / price_modifier
 
 		if sell_price > purchase_price:
 			has_profitable_items = true
@@ -184,7 +197,11 @@ func _state_selling() -> void:
 
 	for item_id: StringName in items_to_sell:
 		var purchase_price: float = purchase_prices.get(item_id, 0.0)
-		var sell_price: float = current_target_hub.get_item_price(item_id)
+		var base_sell_price: float = current_target_hub.get_item_price(item_id)
+
+		# Apply skill bonus: better negotiation = higher effective sell price
+		var price_modifier: float = 1.0 - _price_modifier_bonus
+		var sell_price: float = base_sell_price / price_modifier
 
 		if sell_price > purchase_price:
 			var amount: int = caravan_state.inventory.get(item_id, 0)
@@ -318,6 +335,45 @@ func _arrive_at_home() -> void:
 
 	# Check if we can start another trade run
 	_transition_to(State.IDLE)
+
+# ============================================================
+# Skill Effects Application
+# ============================================================
+## Apply all relevant Trading skill bonuses from leader's character sheet
+func _apply_skill_bonuses() -> void:
+	if caravan_state == null or caravan_state.leader_sheet == null:
+		return
+
+	var sheet: CharacterSheet = caravan_state.leader_sheet
+
+	# Apply NegotiationTactics skill (affects trade prices)
+	var negotiation_rank: int = sheet.get_skill_rank(&"negotiation_tactics")
+	if negotiation_rank > 0:
+		# Simplified: 1.5% better prices per rank
+		# Full implementation would read base_effect_per_rank from SkillDatabase
+		_price_modifier_bonus = float(negotiation_rank) * 0.015
+		print("[Caravan %s] NegotiationTactics Rank %d: %.1f%% price bonus" % [
+			caravan_state.caravan_type.type_id if caravan_state.caravan_type else "?",
+			negotiation_rank,
+			_price_modifier_bonus * 100.0
+		])
+
+	# Apply CaravanLogistics skill (affects speed + capacity)
+	var logistics_rank: int = sheet.get_skill_rank(&"caravan_logistics")
+	if logistics_rank > 0:
+		# Simplified: 2.5% per rank (actual skill: 25-45% across ranks 1-10)
+		var logistics_bonus: float = float(logistics_rank) * 0.025
+		_speed_bonus = logistics_bonus
+		_capacity_bonus = logistics_bonus
+
+		# Apply speed bonus to movement_speed
+		movement_speed *= (1.0 + _speed_bonus)
+
+		print("[Caravan %s] CaravanLogistics Rank %d: %.1f%% speed/capacity bonus" % [
+			caravan_state.caravan_type.type_id if caravan_state.caravan_type else "?",
+			logistics_rank,
+			logistics_bonus * 100.0
+		])
 
 # ============================================================
 # Navigation

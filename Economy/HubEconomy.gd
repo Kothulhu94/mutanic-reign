@@ -14,7 +14,7 @@ func setup(p_config: EconomyConfig, p_item_db: ItemDB) -> void:
 	config = p_config
 	item_db = p_item_db
 
-func tick(dt: float, cap: int, int_inv: Dictionary, float_inv: Dictionary, buildings: Array[Node]) -> Dictionary:
+func tick(dt: float, cap: int, int_inv: Dictionary, float_inv: Dictionary, buildings: Array[Node], p_productivity_bonus: float = 0.0, p_efficiency_bonus: float = 0.0) -> Dictionary:
 	var result: Dictionary = {
 		"delta": {},
 		"food_level": 0.0,
@@ -38,7 +38,7 @@ func tick(dt: float, cap: int, int_inv: Dictionary, float_inv: Dictionary, build
 	# -------------------------
 	for n: Node in buildings:
 		if n.is_in_group("producer") and n.has_method("produce_tick") and bool(n.get("enabled")):
-			var d: Dictionary = (n.call("produce_tick") as Dictionary)
+			var d: Dictionary = (n.call("produce_tick", p_productivity_bonus) as Dictionary)
 			InventoryUtil.merge_delta(total_delta, d)
 			for k in d.keys():
 				var id: StringName = (k if k is StringName else StringName(str(k)))
@@ -52,7 +52,7 @@ func tick(dt: float, cap: int, int_inv: Dictionary, float_inv: Dictionary, build
 	# -------------------------
 	for n: Node in buildings:
 		if n.is_in_group("processor") and n.has_method("refine_tick") and bool(n.get("enabled")):
-			var d2: Dictionary = (n.call("refine_tick", working) as Dictionary)
+			var d2: Dictionary = (n.call("refine_tick", working, p_efficiency_bonus) as Dictionary)
 			InventoryUtil.merge_delta(total_delta, d2)
 			for k in d2.keys():
 				var id2: StringName = (k if k is StringName else StringName(str(k)))

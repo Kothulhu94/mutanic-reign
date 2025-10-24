@@ -25,6 +25,7 @@ Dialogic="*res://addons/dialogic/Core/DialogicGameHandler.gd"
 GameState="*res://singletons/GameState.gd"
 Timekeeper="*res://singletons/Timekeeper.gd"
 SceneLoader="*res://singletons/SceneLoader.gd"
+ProgressionManager="*res://singletons/ProgressionManager.gd"
 TurnManager="*res://addons/limboai/godot_gameplay_systems/turn_based/./autoloads/turn_manager.gd"
 
 [dialogic]

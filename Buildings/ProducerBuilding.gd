@@ -28,11 +28,11 @@ func _ready() -> void:
 		push_warning("Producer '%s' has no product_item_id set; it will produce nothing." % name)
 
 # Hub calls this ONCE per Timekeeper tick; no buffers, no side-effects.
-func produce_tick() -> Dictionary:
+func produce_tick(governor_bonus: float = 0.0) -> Dictionary:
 	if not enabled or product_item_id == StringName():
 		return {}
 	var mult: float = pow(PER_LEVEL_MULT, float(max(level - 1, 0)))
-	var amt: float = base_amount_per_tick * mult
+	var amt: float = base_amount_per_tick * mult * (1.0 + governor_bonus)
 	return { product_item_id: amt}
 
 # Compatibility with any existing Hub loop that calls tick_economy(dt)

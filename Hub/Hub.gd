@@ -103,8 +103,29 @@ func _on_timekeeper_tick(dt: float) -> void:
 	# Compute current population cap (we assume pop == cap)
 	var cap: int = _compute_population_cap_now()
 
-	# Run one economy tick via engine
-	var r: Dictionary = _engine.tick(dt, cap, state.inventory, _inventory_float, buildings)
+	# Calculate governor bonuses
+	var governor_productivity_bonus: float = 0.0  # For ProducerBuildings
+	var governor_efficiency_bonus: float = 0.0    # For ProcessorBuildings
+
+	if state.governor_id != StringName():
+		var pm: Node = get_node_or_null("/root/ProgressionManager")
+		if pm != null and pm.has_method("get_character_sheet"):
+			var governor_sheet: CharacterSheet = pm.get_character_sheet(state.governor_id)
+			if governor_sheet != null:
+				# QualityTools skill boosts producer output
+				var quality_rank: int = governor_sheet.get_skill_rank(&"quality_tools")
+				if quality_rank > 0:
+					# Simplified: 2% per rank (actual: 20-40% across ranks)
+					governor_productivity_bonus = float(quality_rank) * 0.02
+
+				# IndustrialPlanning skill boosts processor efficiency
+				var planning_rank: int = governor_sheet.get_skill_rank(&"industrial_planning")
+				if planning_rank > 0:
+					# Simplified: 3% per rank (actual: 30-60% across ranks)
+					governor_efficiency_bonus = float(planning_rank) * 0.03
+
+	# Run one economy tick via engine (pass bonuses)
+	var r: Dictionary = _engine.tick(dt, cap, state.inventory, _inventory_float, buildings, governor_productivity_bonus, governor_efficiency_bonus)
 
 	# Apply inventory delta (production, processing, consumption)
 	var delta: Dictionary = (r.get("delta", {}) as Dictionary)

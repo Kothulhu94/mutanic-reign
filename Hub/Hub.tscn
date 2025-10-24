@@ -15,10 +15,12 @@ script = ExtResource("1_uc6g7")
 item_db = ExtResource("2_1n6xc")
 economy_config = ExtResource("3_4qr5j")
 
-[node name="ClickandFade" type="Area2D" parent="."]
+[node name="ClickAndFade" type="Area2D" parent="."]
+input_pickable = true
+collision_layer = 3
 script = ExtResource("2_dmv40")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ClickandFade"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ClickAndFade"]
 position = Vector2(-4, 4.000023)
 scale = Vector2(1, 0.9939737)
 shape = SubResource("RectangleShape2D_hjueh")

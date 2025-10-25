@@ -3,8 +3,8 @@ extends CanvasLayer
 
 @onready var resume_button: Button = %ResumeButton # Use %UniqueName syntax if you set it up
 @onready var character_sheet_button: Button = %CharacterSheetButton # Or use get_node("path/to/button")
-
-# Called when the node enters the scene tree for the first time.
+@export var character_sheet_scene: PackedScene
+var character_sheet_instance: Control = null# Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	# Hide the menu initially
 	hide()
@@ -46,6 +46,7 @@ func _on_resume_pressed() -> void:
 
 func _on_character_sheet_pressed() -> void:
 	print("Character Sheet button pressed") # Placeholder
-	# TODO: Instantiate/Show CharacterSheetUI
-	# TODO: Get player character sheet data
+	if character_sheet_instance == null and character_sheet_scene:
+		character_sheet_instance = character_sheet_scene.instantiate()	# TODO: Instantiate/Show CharacterSheetUI
+		add_child(character_sheet_instance)
 	# TODO: Pass data to CharacterSheetUI

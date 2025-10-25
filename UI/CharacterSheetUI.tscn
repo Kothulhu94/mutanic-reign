@@ -1,4 +1,6 @@
-[gd_scene format=3 uid="uid://ccjf7l2hvwepv"]
+[gd_scene load_steps=2 format=3 uid="uid://ccjf7l2hvwepv"]
+
+[ext_resource type="Script" uid="uid://bbdwxfua6b0bt" path="res://UI/CharacterSheetUI.gd" id="1_uqggg"]
 
 [node name="CharacterSheetUI" type="Control"]
 process_mode = 2
@@ -15,6 +17,7 @@ offset_bottom = 380.0
 grow_horizontal = 2
 grow_vertical = 2
 accessibility_name = "CharacterSheetUI"
+script = ExtResource("1_uqggg")
 
 [node name="Panel" type="Panel" parent="."]
 layout_mode = 1

@@ -1,10 +1,12 @@
-[gd_scene load_steps=2 format=3 uid="uid://mll5vsg753d"]
+[gd_scene load_steps=3 format=3 uid="uid://mll5vsg753d"]
 
 [ext_resource type="Script" uid="uid://dm5w0yxg72ud" path="res://UI/PauseMenu.gd" id="1_05bun"]
+[ext_resource type="PackedScene" uid="uid://ccjf7l2hvwepv" path="res://UI/CharacterSheetUI.tscn" id="2_tsvmi"]
 
 [node name="PauseMenu" type="CanvasLayer"]
 process_mode = 2
 script = ExtResource("1_05bun")
+character_sheet_scene = ExtResource("2_tsvmi")
 
 [node name="ColorRect" type="ColorRect" parent="."]
 anchors_preset = 15

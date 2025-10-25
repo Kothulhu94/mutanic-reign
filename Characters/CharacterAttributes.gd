@@ -1,5 +1,5 @@
 # res://Characters/CharacterAttributes.gd
-extends RefCounted
+extends Resource
 class_name CharacterAttributes
 
 ## Manages the 4 core character attributes: Might, Guile, Intellect, Willpower

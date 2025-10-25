@@ -9,7 +9,10 @@ class_name CharacterSheet
 @export var character_name: String = "Nameless"
 @export var character_description: String = ""
 @export var level: int = 1
-
+@export_group("Base Combat Stats")
+@export var base_health: int = 100
+@export var base_damage: int = 10
+@export var base_defense: int = 5
 ## Core progression components
 @export var attributes: CharacterAttributes
 ## Dictionary of learned skills: { skill_id (StringName) -> SkillSpec instance }
@@ -19,7 +22,24 @@ var skills: Dictionary = {}
 func _init() -> void:
 	attributes = CharacterAttributes.new()
 
+# --- Stat Calculation Functions ---
 
+func get_effective_health() -> int:
+	# TODO: Calculate based on base_health + attribute/skill modifiers
+	return base_health
+
+func get_effective_damage() -> int:
+	# TODO: Calculate based on base_damage + attribute/skill modifiers
+	return base_damage
+
+func get_effective_defense() -> int:
+	# TODO: Calculate based on base_defense + attribute/skill modifiers
+	return base_defense
+# Example for speed - Needs base speed source (like CaravanType or player base speed)
+# func get_effective_speed(base_speed : float) -> float:
+# 	var speed_mod = attributes.get_modifier("agility") # Example attribute
+# 	return base_speed * (1.0 + speed_mod / 100.0) # Example modifier logic
+# 	return base_speed # Placeholder if no logic yet
 ## Adds a new skill to the character's skill list.
 ## Skills start at rank 1 with 0 XP (rank 0 would mean "not learned").
 func add_skill(skill_id: StringName, skill_db: SkillDatabase) -> void:

@@ -3,10 +3,11 @@ class_name Bus
 
 @onready var agent: NavigationAgent2D = $NavigationAgent2D
 @export var move_speed := 200.0
-
+var charactersheet: CharacterSheet
 var _is_paused: bool = false
 
 func _ready() -> void:
+	charactersheet = CharacterSheet.new()
 	# Connect to Timekeeper pause/resume signals
 	var timekeeper: Node = get_node_or_null("/root/Timekeeper")
 	if timekeeper != null:

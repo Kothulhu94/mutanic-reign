@@ -1,0 +1,112 @@
+[gd_scene format=3 uid="uid://ccjf7l2hvwepv"]
+
+[node name="CharacterSheetUI" type="Control"]
+process_mode = 2
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 580.0
+offset_bottom = 380.0
+grow_horizontal = 2
+grow_vertical = 2
+accessibility_name = "CharacterSheetUI"
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+accessibility_name = "Backgroundpanel"
+
+[node name="MainLayoutContainer" type="MarginContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+accessibility_name = "MainLayoutContainer"
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="ContentBox" type="VBoxContainer" parent="Panel/MainLayoutContainer"]
+layout_mode = 2
+accessibility_name = "ContentBox"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/MainLayoutContainer/ContentBox"]
+layout_mode = 2
+accessibility_name = "LabelContainer"
+
+[node name="CharacterName" type="Label" parent="Panel/MainLayoutContainer/ContentBox/HBoxContainer"]
+layout_mode = 2
+accessibility_name = "CharacterName"
+
+[node name="CharacterLevel" type="Label" parent="Panel/MainLayoutContainer/ContentBox/HBoxContainer"]
+layout_mode = 2
+accessibility_name = "CharacterLevel"
+
+[node name="HSeparator" type="HSeparator" parent="Panel/MainLayoutContainer/ContentBox"]
+layout_mode = 2
+accessibility_name = "Seperater of labels"
+
+[node name="AtrributeHeader" type="Label" parent="Panel/MainLayoutContainer/ContentBox"]
+layout_mode = 2
+accessibility_name = "AtrributeHeader"
+
+[node name="AttributeGrid" type="GridContainer" parent="Panel/MainLayoutContainer/ContentBox"]
+layout_mode = 2
+accessibility_name = "AttributeGrid"
+columns = 2
+
+[node name="Might" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
+layout_mode = 2
+accessibility_name = "Might"
+
+[node name="MightValue" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+accessibility_name = "MightValue"
+
+[node name="Guile" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
+layout_mode = 2
+accessibility_name = "Guile"
+
+[node name="GuileValue" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+accessibility_name = "GuileValue"
+
+[node name="Intellect" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
+layout_mode = 2
+accessibility_name = "Intellect"
+
+[node name="IntellectValue" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+accessibility_name = "IntellectValue"
+
+[node name="Willpower" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
+layout_mode = 2
+accessibility_name = "Willpower"
+
+[node name="WillpowerValue" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+accessibility_name = "WillpowerValue"
+
+[node name="CloseSeperater" type="HSeparator" parent="Panel/MainLayoutContainer/ContentBox"]
+layout_mode = 2
+accessibility_name = "CloseSeperater"
+
+[node name="CloseButton" type="Button" parent="Panel/MainLayoutContainer/ContentBox"]
+layout_mode = 2
+accessibility_name = "Close "

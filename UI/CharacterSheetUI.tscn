@@ -1,6 +1,19 @@
-[gd_scene load_steps=2 format=3 uid="uid://ccjf7l2hvwepv"]
+[gd_scene load_steps=4 format=3 uid="uid://ccjf7l2hvwepv"]
 
 [ext_resource type="Script" uid="uid://bbdwxfua6b0bt" path="res://UI/CharacterSheetUI.gd" id="1_uqggg"]
+[ext_resource type="PackedScene" uid="uid://dkvn8y7x5nbrq" path="res://UI/SkillListUI.tscn" id="2_dcr2p"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_charsheet"]
+bg_color = Color(0.15, 0.15, 0.15, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.4, 0.4, 0.4, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
 
 [node name="CharacterSheetUI" type="Control"]
 process_mode = 2
@@ -18,6 +31,7 @@ grow_horizontal = 2
 grow_vertical = 2
 accessibility_name = "CharacterSheetUI"
 script = ExtResource("1_uqggg")
+skill_list_scene = ExtResource("2_dcr2p")
 
 [node name="Panel" type="Panel" parent="."]
 layout_mode = 1
@@ -26,6 +40,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_charsheet")
 accessibility_name = "Backgroundpanel"
 
 [node name="MainLayoutContainer" type="MarginContainer" parent="Panel"]
@@ -50,10 +65,12 @@ layout_mode = 2
 accessibility_name = "LabelContainer"
 
 [node name="CharacterName" type="Label" parent="Panel/MainLayoutContainer/ContentBox/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 accessibility_name = "CharacterName"
 
 [node name="CharacterLevel" type="Label" parent="Panel/MainLayoutContainer/ContentBox/HBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 accessibility_name = "CharacterLevel"
 
@@ -64,6 +81,7 @@ accessibility_name = "Seperater of labels"
 [node name="AtrributeHeader" type="Label" parent="Panel/MainLayoutContainer/ContentBox"]
 layout_mode = 2
 accessibility_name = "AtrributeHeader"
+text = "Attributes"
 
 [node name="AttributeGrid" type="GridContainer" parent="Panel/MainLayoutContainer/ContentBox"]
 layout_mode = 2
@@ -73,6 +91,7 @@ columns = 2
 [node name="Might" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
 layout_mode = 2
 accessibility_name = "Might"
+text = "Might:"
 
 [node name="MightValue" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
 unique_name_in_owner = true
@@ -82,6 +101,7 @@ accessibility_name = "MightValue"
 [node name="Guile" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
 layout_mode = 2
 accessibility_name = "Guile"
+text = "Guile:"
 
 [node name="GuileValue" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
 unique_name_in_owner = true
@@ -91,6 +111,7 @@ accessibility_name = "GuileValue"
 [node name="Intellect" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
 layout_mode = 2
 accessibility_name = "Intellect"
+text = "Intellect:"
 
 [node name="IntellectValue" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
 unique_name_in_owner = true
@@ -100,6 +121,7 @@ accessibility_name = "IntellectValue"
 [node name="Willpower" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
 layout_mode = 2
 accessibility_name = "Willpower"
+text = "Willpower:"
 
 [node name="WillpowerValue" type="Label" parent="Panel/MainLayoutContainer/ContentBox/AttributeGrid"]
 unique_name_in_owner = true
@@ -110,6 +132,14 @@ accessibility_name = "WillpowerValue"
 layout_mode = 2
 accessibility_name = "CloseSeperater"
 
-[node name="CloseButton" type="Button" parent="Panel/MainLayoutContainer/ContentBox"]
+[node name="ViewSkillsButton" type="Button" parent="Panel/MainLayoutContainer/ContentBox"]
+unique_name_in_owner = true
 layout_mode = 2
-accessibility_name = "Close "
+accessibility_name = "View Skills"
+text = "View Skills"
+
+[node name="CloseButton" type="Button" parent="Panel/MainLayoutContainer/ContentBox"]
+unique_name_in_owner = true
+layout_mode = 2
+accessibility_name = "Close"
+text = "Close"

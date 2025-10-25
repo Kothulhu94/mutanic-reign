@@ -4,7 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://ccjf7l2hvwepv" path="res://UI/CharacterSheetUI.tscn" id="2_tsvmi"]
 
 [node name="PauseMenu" type="CanvasLayer"]
-process_mode = 2
+process_mode = 3
 script = ExtResource("1_05bun")
 character_sheet_scene = ExtResource("2_tsvmi")
 
@@ -33,11 +33,13 @@ grow_vertical = 2
 accessibility_name = "PlayerMenu"
 
 [node name="ResumeButton" type="Button" parent="ColorRect/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 accessibility_name = "resume"
 text = "RESUME"
 
-[node name="CharacterSHeetButton" type="Button" parent="ColorRect/VBoxContainer"]
+[node name="CharacterSheetButton" type="Button" parent="ColorRect/VBoxContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 accessibility_name = "Character Sheet"
 text = "Character Sheet"

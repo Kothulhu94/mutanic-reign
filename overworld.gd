@@ -20,7 +20,7 @@ const NAV_LAYERS: int = 1  # keep in lockstep with the NavigationAgent2D
 @export var caravan_spawn_interval: float = 30.0  # Check for spawning every 30 seconds
 var caravan_spawn_timer: float = 0.0
 var active_caravans: Array[Caravan] = []
-
+var _caravan_type_counters: Dictionary = {}
 # Track threshold multipliers per hub per caravan type
 # Key format: "hub_id:caravan_type_id" -> multiplier
 var caravan_threshold_multipliers: Dictionary = {}
@@ -276,7 +276,7 @@ func _try_spawn_caravan_from_hub(home_hub: Hub, all_hubs: Array[Hub]) -> void:
 		_spawn_caravan(home_hub, caravan_type, all_hubs)
 
 		# Increase threshold for next spawn by 50%
-		caravan_threshold_multipliers[key] = threshold_multiplier * 1.5
+		caravan_threshold_multipliers[key] = threshold_multiplier * 2
 		print("    Next spawn threshold: x%.1f" % caravan_threshold_multipliers[key])
 
 		break  # Only spawn one caravan per hub per check
@@ -329,15 +329,19 @@ func _hub_has_surplus_for_type(hub: Hub, caravan_type: CaravanType, threshold_mu
 func _spawn_caravan(home_hub: Hub, caravan_type: CaravanType, all_hubs: Array[Hub]) -> void:
 	if caravan_scene == null:
 		return
-
+	
 	var caravan: Caravan = caravan_scene.instantiate() as Caravan
 	if caravan == null:
 		return
-
+	var type_id_str: String = str(caravan_type.type_id) # Get the type name as a string
+	var current_count: int = _caravan_type_counters.get(type_id_str, 0) + 1 # Get current count for this type (default 0) + 1
+	_caravan_type_counters[type_id_str] = current_count # Store the updated count
+	caravan.name = "%s_%d" % [type_id_str, current_count]
+	var leader_sheet: CharacterSheet = CharacterSheet.new()
 	# Create caravan state
 	var starting_money: int = caravan_type.get_starting_money(home_hub.state.base_population_cap)
-	var state: CaravanState = CaravanState.new(home_hub.state.hub_id, StringName(), starting_money, caravan_type)
-
+	var state: CaravanState = CaravanState.new(home_hub.state.hub_id, StringName(), starting_money, caravan_type, leader_sheet)
+	
 	# Set surplus threshold from config
 	if home_hub.economy_config != null:
 		caravan.surplus_threshold = home_hub.economy_config.caravan_surplus_threshold

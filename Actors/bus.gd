@@ -6,7 +6,17 @@ class_name Bus
 
 var _is_paused: bool = false
 
+# Player inventory and money
+@export var money: int = 1000
+@export var inventory: Dictionary = {}  # item_id (StringName) -> count (int)
+
 func _ready() -> void:
+	# Initialize test inventory if empty (for testing purposes)
+	if inventory.is_empty():
+		inventory[&"food"] = 50
+		inventory[&"wood"] = 30
+		inventory[&"stone"] = 20
+
 	# Connect to Timekeeper pause/resume signals
 	var timekeeper: Node = get_node_or_null("/root/Timekeeper")
 	if timekeeper != null:

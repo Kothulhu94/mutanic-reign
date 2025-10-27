@@ -14,6 +14,12 @@ signal loot_closed(defeated_actor: Node2D)
 var player_actor: Node2D = null
 var defeated_actor: Node2D = null
 
+var loot_cart: Dictionary = {}  # item_id -> quantity to take
+var last_clicked_item: StringName = StringName()
+
+var player_row_nodes: Dictionary = {}
+var defeated_row_nodes: Dictionary = {}
+
 func _ready() -> void:
 	hide()
 	set_process_input(true)
@@ -36,6 +42,7 @@ func open(player_ref: Node2D, defeated_ref: Node2D) -> void:
 	player_actor = player_ref
 	defeated_actor = defeated_ref
 
+	_clear_cart()
 	_populate_ui()
 	show()
 
@@ -53,6 +60,10 @@ func close_loot() -> void:
 	loot_closed.emit(defeated_actor)
 	player_actor = null
 	defeated_actor = null
+
+func _clear_cart() -> void:
+	loot_cart.clear()
+	last_clicked_item = StringName()
 
 func _populate_ui() -> void:
 	if player_actor == null or defeated_actor == null:
@@ -76,6 +87,7 @@ func _populate_player_list() -> void:
 
 	for child in player_item_list.get_children():
 		child.queue_free()
+	player_row_nodes.clear()
 
 	if player_actor.get("inventory") == null:
 		return
@@ -88,9 +100,7 @@ func _populate_player_list() -> void:
 	for item_id: StringName in sorted_items:
 		var stock: int = player_actor.inventory.get(item_id, 0)
 		if stock > 0:
-			var label: Label = Label.new()
-			label.text = "%s: %d" % [item_id, stock]
-			player_item_list.add_child(label)
+			_create_player_item_row(item_id, stock)
 
 func _populate_defeated_list() -> void:
 	if defeated_item_list == null or defeated_actor == null:
@@ -98,6 +108,7 @@ func _populate_defeated_list() -> void:
 
 	for child in defeated_item_list.get_children():
 		child.queue_free()
+	defeated_row_nodes.clear()
 
 	var defeated_inventory: Dictionary = _get_defeated_inventory()
 	var sorted_items: Array[StringName] = []
@@ -108,10 +119,133 @@ func _populate_defeated_list() -> void:
 	for item_id: StringName in sorted_items:
 		var stock: int = defeated_inventory.get(item_id, 0)
 		if stock > 0:
-			var button: Button = Button.new()
-			button.text = "%s: %d" % [item_id, stock]
-			button.pressed.connect(_on_loot_item_clicked.bind(item_id))
-			defeated_item_list.add_child(button)
+			_create_defeated_item_row(item_id, stock)
+
+func _create_player_item_row(item_id: StringName, stock: int) -> void:
+	if player_item_list == null:
+		return
+
+	var label: Label = Label.new()
+	label.text = "%s: %d" % [item_id, stock]
+	player_item_list.add_child(label)
+
+	player_row_nodes[item_id] = {"label": label, "stock": stock}
+
+func _create_defeated_item_row(item_id: StringName, stock: int) -> void:
+	if defeated_item_list == null:
+		return
+
+	var container: VBoxContainer = VBoxContainer.new()
+	container.set_meta("item_id", item_id)
+	defeated_item_list.add_child(container)
+
+	# Base row with item name button
+	var base_row: HBoxContainer = HBoxContainer.new()
+	base_row.set_meta("item_id", item_id)
+	container.add_child(base_row)
+
+	var base_button: Button = Button.new()
+	base_button.text = "%s: %d" % [item_id, stock]
+	base_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	base_button.pressed.connect(_on_item_row_clicked.bind(item_id))
+	base_row.add_child(base_button)
+
+	# Adjuster row with quantity selector (hidden by default)
+	var adjuster_container: HBoxContainer = HBoxContainer.new()
+	adjuster_container.visible = false
+	adjuster_container.set_meta("item_id", item_id)
+	container.add_child(adjuster_container)
+
+	var minus_button: Button = Button.new()
+	minus_button.text = "-"
+	minus_button.custom_minimum_size = Vector2(30, 0)
+	minus_button.pressed.connect(_on_quantity_adjust.bind(item_id, -1))
+
+	var qty_input: LineEdit = LineEdit.new()
+	qty_input.text = "0"
+	qty_input.custom_minimum_size = Vector2(60, 0)
+	qty_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qty_input.text_changed.connect(_on_quantity_text_changed.bind(item_id))
+
+	var plus_button: Button = Button.new()
+	plus_button.text = "+"
+	plus_button.custom_minimum_size = Vector2(30, 0)
+	plus_button.pressed.connect(_on_quantity_adjust.bind(item_id, 1))
+
+	var take_label: Label = Label.new()
+	take_label.text = "Take:"
+
+	adjuster_container.add_child(take_label)
+	adjuster_container.add_child(minus_button)
+	adjuster_container.add_child(qty_input)
+	adjuster_container.add_child(plus_button)
+
+	var node_data: Dictionary = {
+		"container": container,
+		"base_row": base_row,
+		"base_button": base_button,
+		"adjuster": adjuster_container,
+		"qty_input": qty_input,
+		"stock": stock
+	}
+
+	defeated_row_nodes[item_id] = node_data
+
+func _on_item_row_clicked(item_id: StringName) -> void:
+	if not defeated_row_nodes.has(item_id):
+		return
+
+	var node_data: Dictionary = defeated_row_nodes[item_id]
+	var adjuster: HBoxContainer = node_data.get("adjuster")
+
+	if adjuster == null:
+		return
+
+	var current_qty: int = loot_cart.get(item_id, 0)
+
+	# Collapse previous item if it has 0 quantity
+	if current_qty == 0 and last_clicked_item != StringName() and last_clicked_item != item_id:
+		_collapse_row(last_clicked_item)
+
+	adjuster.visible = not adjuster.visible
+	last_clicked_item = item_id if adjuster.visible else StringName()
+
+func _collapse_row(item_id: StringName) -> void:
+	if not defeated_row_nodes.has(item_id):
+		return
+
+	var node_data: Dictionary = defeated_row_nodes[item_id]
+	var adjuster: HBoxContainer = node_data.get("adjuster")
+
+	if adjuster != null:
+		adjuster.visible = false
+
+func _on_quantity_adjust(item_id: StringName, delta: int) -> void:
+	var current_qty: int = loot_cart.get(item_id, 0)
+	var new_qty: int = current_qty + delta
+	_update_cart_for_item(item_id, new_qty)
+
+func _on_quantity_text_changed(new_text: String, item_id: StringName) -> void:
+	if new_text.is_empty():
+		return
+
+	var new_qty: int = new_text.to_int()
+	_update_cart_for_item(item_id, new_qty)
+
+func _update_cart_for_item(item_id: StringName, new_qty: int) -> void:
+	if not defeated_row_nodes.has(item_id):
+		return
+
+	var node_data: Dictionary = defeated_row_nodes[item_id]
+	var stock: int = node_data.get("stock", 0)
+
+	var clamped_qty: int = clampi(new_qty, 0, stock)
+
+	loot_cart[item_id] = clamped_qty
+
+	var qty_input: LineEdit = node_data.get("qty_input")
+	if qty_input != null:
+		qty_input.text = str(clamped_qty)
 
 func _get_defeated_inventory() -> Dictionary:
 	if defeated_actor == null:
@@ -127,31 +261,22 @@ func _get_defeated_inventory() -> Dictionary:
 
 	return {}
 
-func _on_loot_item_clicked(item_id: StringName) -> void:
-	var defeated_inventory: Dictionary = _get_defeated_inventory()
-	var amount: int = defeated_inventory.get(item_id, 0)
-
-	if amount <= 0:
-		return
-
-	if player_actor.has_method("add_item"):
-		if player_actor.add_item(item_id, amount):
-			_remove_from_defeated(item_id, amount)
-			_populate_player_list()
-			_populate_defeated_list()
-
 func _on_take_all_pressed() -> void:
 	var defeated_inventory: Dictionary = _get_defeated_inventory()
+
 	for item_id in defeated_inventory.keys():
 		var amount: int = defeated_inventory.get(item_id, 0)
+		if amount > 0:
+			_update_cart_for_item(item_id, amount)
+
+func _on_done_pressed() -> void:
+	# Transfer items from defeated to player
+	for item_id in loot_cart.keys():
+		var amount: int = loot_cart.get(item_id, 0)
 		if amount > 0 and player_actor.has_method("add_item"):
 			if player_actor.add_item(item_id, amount):
 				_remove_from_defeated(item_id, amount)
 
-	_populate_player_list()
-	_populate_defeated_list()
-
-func _on_done_pressed() -> void:
 	close_loot()
 
 func _remove_from_defeated(item_id: StringName, amount: int) -> void:

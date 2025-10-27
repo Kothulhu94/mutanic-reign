@@ -25,6 +25,12 @@ func open_encounter(attacker: Node2D, defender: Node2D) -> void:
 	_attacker = attacker
 	_defender = defender
 
+	# Reset UI state for new encounter
+	if attack_button != null:
+		attack_button.disabled = false
+	if combat_label != null:
+		combat_label.text = "Encounter!"
+
 	visible = true
 	modulate = Color.WHITE
 	z_index = 100

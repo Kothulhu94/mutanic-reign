@@ -444,8 +444,14 @@ func _on_combat_ended(attacker: Node2D, defender: Node2D, winner: Node2D) -> voi
 		_encounter_ui.close_ui()
 
 	if winner == _player_bus:
+		# Remove defeated actor immediately
+		var defeated: Node2D = defender if attacker == _player_bus else attacker
+		if defeated != null and defeated != _player_bus:
+			defeated.queue_free()
+
+		# Open loot UI
 		if _loot_ui != null:
-			_loot_ui.open(_player_bus, defender)
+			_loot_ui.open(_player_bus, defeated)
 	elif winner == attacker or winner == defender:
 		if winner != _player_bus:
 			if _game_over_ui != null:
@@ -456,5 +462,5 @@ func _on_encounter_exit() -> void:
 		_encounter_ui.close_ui()
 
 func _on_loot_closed(defeated_actor: Node2D) -> void:
-	if defeated_actor != null:
-		defeated_actor.queue_free()
+	# Actor already removed in _on_combat_ended
+	pass

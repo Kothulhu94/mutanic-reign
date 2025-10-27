@@ -130,6 +130,15 @@ func _process(delta: float) -> void:
 		caravan_spawn_timer = 0.0
 		_try_spawn_caravans()
 
+	# Update pathline during chase
+	if _player_bus != null and bus != null:
+		var chase_target: Node2D = _player_bus.get_chase_target()
+		if chase_target != null:
+			var start_on_nav: Vector2 = _snap_to_nav(bus.global_position)
+			var target_on_nav: Vector2 = _snap_to_nav(chase_target.global_position)
+			var world_path: PackedVector2Array = _compute_nav_path(start_on_nav, target_on_nav)
+			_set_path_line(world_path)
+
 func _physics_process(_delta: float) -> void:
 	if bus == null or _path_world.size() == 0 or path_line == null:
 		return
@@ -428,14 +437,17 @@ func _on_timekeeper_resumed() -> void:
 # Combat System Callbacks
 # -------------------------------------------------------------------
 func _on_chase_started() -> void:
-	# Clear pathline when starting a chase
-	_path_world.clear()
-	if path_line != null:
-		path_line.points = PackedVector2Array()
-		path_line.visible = false
+	pass  # Pathline will update automatically during chase
 
 func _on_chase_initiated(caravan_actor: Caravan) -> void:
-	if _player_bus != null:
+	if _player_bus != null and bus != null:
+		# Set up pathline to show route to caravan
+		var start_on_nav: Vector2 = _snap_to_nav(bus.global_position)
+		var target_on_nav: Vector2 = _snap_to_nav(caravan_actor.global_position)
+		var world_path: PackedVector2Array = _compute_nav_path(start_on_nav, target_on_nav)
+		_set_path_line(world_path)
+
+		# Start the chase
 		_player_bus.chase_target(caravan_actor)
 
 func _on_encounter_initiated(attacker: Node2D, defender: Node2D) -> void:

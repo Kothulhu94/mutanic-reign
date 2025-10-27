@@ -146,3 +146,7 @@ func _on_health_changed(new_health: int, max_health: int) -> void:
 func chase_target(target: Node2D) -> void:
 	_chase_target = target
 	chase_started.emit()
+
+## Returns the current chase target, or null if not chasing
+func get_chase_target() -> Node2D:
+	return _chase_target

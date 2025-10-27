@@ -275,19 +275,14 @@ func _await_nav_ready() -> void:
 # ============================================================
 func _try_spawn_caravans() -> void:
 	if item_db == null:
-		print("[Caravan Spawner] ItemDB is null - cannot spawn caravans")
 		return
 
 	if caravan_types.is_empty():
-		print("[Caravan Spawner] No caravan types configured")
 		return
 
 	var hubs: Array[Hub] = _get_all_hubs()
 	if hubs.is_empty():
-		print("[Caravan Spawner] No hubs found in scene")
 		return
-
-	print("[Caravan Spawner] Checking %d hubs for caravan spawning..." % hubs.size())
 
 	# Try to spawn a caravan from each hub
 	for hub in hubs:
@@ -295,29 +290,13 @@ func _try_spawn_caravans() -> void:
 
 func _try_spawn_caravan_from_hub(home_hub: Hub, all_hubs: Array[Hub]) -> void:
 	if home_hub == null:
-		print("[Caravan Spawner] Hub is null")
 		return
 
 	if home_hub.item_db == null:
-		print("[Caravan Spawner] Hub '%s' has no ItemDB assigned" % home_hub.name)
 		return
 
 	if home_hub.state == null:
-		print("[Caravan Spawner] Hub '%s' has no state assigned" % home_hub.name)
 		return
-
-	print("[Caravan Spawner] Checking hub '%s' (inventory: %d items, food_level: %.1f, infra_level: %.1f)" % [
-		home_hub.name,
-		home_hub.state.inventory.size(),
-		home_hub.food_level,
-		home_hub.infrastructure_level
-	])
-
-	# Debug: Show inventory contents
-	for item_id in home_hub.state.inventory.keys():
-		var stock: int = home_hub.state.inventory.get(item_id, 0)
-		if stock > 100:  # Only show items with significant stock
-			print("    - %s: %d units" % [item_id, stock])
 
 	# Check each caravan type to see if hub has surplus of preferred items
 	for caravan_type: CaravanType in caravan_types:
@@ -331,27 +310,22 @@ func _try_spawn_caravan_from_hub(home_hub: Hub, all_hubs: Array[Hub]) -> void:
 		# Check if this hub has surplus of this type's preferred items (with progressive threshold)
 		var has_surplus: bool = _hub_has_surplus_for_type(home_hub, caravan_type, threshold_multiplier)
 		if not has_surplus:
-			print("  - %s: No surplus (threshold x%.1f)" % [caravan_type.type_id, threshold_multiplier])
 			continue
 
 		# Spawn the caravan
-		print("  - %s: SPAWNING CARAVAN (threshold x%.1f)!" % [caravan_type.type_id, threshold_multiplier])
 		_spawn_caravan(home_hub, caravan_type, all_hubs)
 
 		# Increase threshold for next spawn by 50%
 		caravan_threshold_multipliers[key] = threshold_multiplier * 2
-		print("    Next spawn threshold: x%.1f" % caravan_threshold_multipliers[key])
 
 		break  # Only spawn one caravan per hub per check
 
 func _hub_has_surplus_for_type(hub: Hub, caravan_type: CaravanType, threshold_multiplier: float = 1.0) -> bool:
 	if hub == null or hub.item_db == null or caravan_type == null:
-		print("    [%s] Missing hub, item_db, or caravan_type" % caravan_type.type_id)
 		return false
 
 	var preferred_tags: Array[StringName] = caravan_type.preferred_tags
 	if preferred_tags.is_empty():
-		print("    [%s] No preferred tags configured" % caravan_type.type_id)
 		return false
 
 	var surplus_threshold: float = 200.0
@@ -360,8 +334,6 @@ func _hub_has_surplus_for_type(hub: Hub, caravan_type: CaravanType, threshold_mu
 
 	# Apply progressive multiplier
 	surplus_threshold *= threshold_multiplier
-
-	print("    [%s] Checking for tags %s (threshold: %.0f)" % [caravan_type.type_id, str(preferred_tags), surplus_threshold])
 
 	for item_id: StringName in hub.state.inventory.keys():
 		var stock: int = hub.state.inventory.get(item_id, 0)
@@ -375,14 +347,11 @@ func _hub_has_surplus_for_type(hub: Hub, caravan_type: CaravanType, threshold_mu
 				var has_positive_surplus: bool = false
 				if hub.item_db.has_tag(item_id, &"food"):
 					has_positive_surplus = hub.food_level > 0.0
-					print("      Found %s (%d units, food_level: %.1f) - surplus: %s" % [item_id, stock, hub.food_level, "YES" if has_positive_surplus else "NO"])
 				elif hub.item_db.has_tag(item_id, &"material"):
 					has_positive_surplus = hub.infrastructure_level > 0.0
-					print("      Found %s (%d units, infra_level: %.1f) - surplus: %s" % [item_id, stock, hub.infrastructure_level, "YES" if has_positive_surplus else "NO"])
 				else:
 					# For other types (luxury, medical), just check stock
 					has_positive_surplus = true
-					print("      Found %s (%d units) - surplus: YES (luxury/medical/other)" % [item_id, stock])
 
 				if has_positive_surplus:
 					return true
@@ -420,8 +389,6 @@ func _spawn_caravan(home_hub: Hub, caravan_type: CaravanType, all_hubs: Array[Hu
 	caravan.setup(home_hub, state, item_db, all_hubs)
 	active_caravans.append(caravan)
 
-	print("    [SPAWNED] %s caravan at hub %s" % [caravan_type.type_id, home_hub.name])
-
 	# Connect combat and cleanup signals
 	caravan.player_initiated_chase.connect(_on_chase_initiated)
 	caravan.tree_exited.connect(_on_caravan_removed.bind(caravan))
@@ -434,7 +401,6 @@ func _on_caravan_removed(caravan: Caravan) -> void:
 	if caravan.home_hub != null and caravan.caravan_state != null and caravan.caravan_state.caravan_type != null:
 		var key: String = "%s:%s" % [caravan.home_hub.state.hub_id, caravan.caravan_state.caravan_type.type_id]
 		caravan_threshold_multipliers[key] = 1.0
-		print("[Caravan System] Threshold reset for %s at %s (caravan destroyed)" % [caravan.caravan_state.caravan_type.type_id, caravan.home_hub.name])
 
 func _get_all_hubs() -> Array[Hub]:
 	var hubs: Array[Hub] = []
@@ -470,12 +436,8 @@ func _on_chase_initiated(caravan_actor: Caravan) -> void:
 		_player_bus.chase_target(caravan_actor)
 
 func _on_encounter_initiated(attacker: Node2D, defender: Node2D) -> void:
-	print("[Overworld] Encounter initiated between %s and %s" % [attacker.name, defender.name])
 	if _encounter_ui != null:
-		print("[Overworld] Opening EncounterUI")
 		_encounter_ui.open_encounter(attacker, defender)
-	else:
-		print("[Overworld] ERROR: _encounter_ui is null!")
 
 func _on_combat_ended(attacker: Node2D, defender: Node2D, winner: Node2D) -> void:
 	if _encounter_ui != null:

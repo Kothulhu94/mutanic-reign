@@ -2,13 +2,19 @@ extends Node
 
 ## Resolves a single combat round between two actors
 func resolve_combat_round(actor_a: Node2D, actor_b: Node2D) -> void:
+	print("[CombatManager] resolve_combat_round called: %s vs %s" % [actor_a.name if actor_a else "null", actor_b.name if actor_b else "null"])
+
 	if actor_a == null or actor_b == null:
+		print("[CombatManager] ERROR: One or both actors are null!")
 		return
 
 	var a_sheet: CharacterSheet = actor_a.get("charactersheet")
 	var b_sheet: CharacterSheet = actor_b.get("charactersheet")
 
+	print("[CombatManager] Sheets found: %s=%s, %s=%s" % [actor_a.name, "found" if a_sheet else "NULL", actor_b.name, "found" if b_sheet else "NULL"])
+
 	if a_sheet == null or b_sheet == null:
+		print("[CombatManager] ERROR: Could not find charactersheet on one or both actors!")
 		return
 
 	var a_atk: int = a_sheet.get_effective_damage()

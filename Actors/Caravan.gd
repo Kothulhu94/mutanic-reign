@@ -15,6 +15,13 @@ var home_hub: Hub = null
 var current_target_hub: Hub = null
 var _is_paused: bool = false
 
+## Computed property for combat system compatibility
+var charactersheet: CharacterSheet:
+	get:
+		if caravan_state != null:
+			return caravan_state.leader_sheet
+		return null
+
 # Health visual
 var _health_visual: Control
 
@@ -162,26 +169,16 @@ func _state_buying_at_home() -> void:
 				purchase_prices[item_id] = price
 				total_bought += amount_to_buy
 
-	print("[Caravan %s @ %s] Bought %d items, inventory: %d types" % [
-		caravan_state.caravan_type.type_id if caravan_state.caravan_type else "?",
-		home_hub.name,
-		total_bought,
-		caravan_state.inventory.size()
-	])
-
 	# Find a destination hub
 	if caravan_state.inventory.size() > 0:
 		_find_next_destination()
 		if current_target_hub != null:
-			print("  -> Traveling to %s" % current_target_hub.name)
 			_transition_to(State.TRAVELING)
 		else:
 			# No destination found, return to idle
-			print("  -> No destination, going idle")
 			_transition_to(State.IDLE)
 	else:
 		# Couldn't buy anything
-		print("  -> Couldn't buy anything, going idle")
 		_transition_to(State.IDLE)
 
 func _state_traveling(delta: float) -> void:
@@ -386,11 +383,6 @@ func _apply_skill_bonuses() -> void:
 		# Simplified: 1.5% better prices per rank
 		# Full implementation would read base_effect_per_rank from SkillDatabase
 		_price_modifier_bonus = float(negotiation_rank) * 0.015
-		print("[Caravan %s] NegotiationTactics Rank %d: %.1f%% price bonus" % [
-			caravan_state.caravan_type.type_id if caravan_state.caravan_type else "?",
-			negotiation_rank,
-			_price_modifier_bonus * 100.0
-		])
 
 	# Apply CaravanLogistics skill (affects speed + capacity)
 	var logistics_rank: int = sheet.get_skill_rank(&"caravan_logistics")
@@ -402,12 +394,6 @@ func _apply_skill_bonuses() -> void:
 
 		# Apply speed bonus to movement_speed
 		movement_speed *= (1.0 + _speed_bonus)
-
-		print("[Caravan %s] CaravanLogistics Rank %d: %.1f%% speed/capacity bonus" % [
-			caravan_state.caravan_type.type_id if caravan_state.caravan_type else "?",
-			logistics_rank,
-			logistics_bonus * 100.0
-		])
 
 # ============================================================
 # Navigation

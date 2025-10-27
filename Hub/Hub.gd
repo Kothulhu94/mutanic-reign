@@ -80,8 +80,7 @@ func _ready() -> void:
 			click_and_fade.actor_entered.connect(_on_actor_entered)
 		if click_and_fade.has_signal("actor_exited"):
 			click_and_fade.actor_exited.connect(_on_actor_exited)
-		if click_and_fade.has_signal("hub_clicked"):
-			click_and_fade.hub_clicked.connect(_on_hub_clicked)
+		# NOTE: Removed hub_clicked connection - UI only shows on proximity entry
 
 	# Connect UI signals
 	if hub_menu_ui != null:
@@ -274,8 +273,8 @@ func _on_actor_exited(_actor: Node) -> void:
 	pass
 
 func _on_hub_clicked() -> void:
-	# Show menu when hub is clicked directly
-	_show_hub_menu()
+	# Disabled: Hub UI now only shows when bus enters proximity area
+	pass
 
 # -------------------------------------------------------------------
 # UI Management

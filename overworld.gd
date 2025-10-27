@@ -3,9 +3,6 @@ extends Node2D
 @export var bus_scene: PackedScene = preload("res://Actors/Bus.tscn")
 @export var camera_scene: PackedScene = preload("res://Actors/PlayerCamera.tscn")
 @export var caravan_scene: PackedScene = preload("res://Actors/Caravan.tscn")
-@export var encounter_ui_scene: PackedScene
-@export var loot_ui_scene: PackedScene
-@export var game_over_ui_scene: PackedScene
 
 @export var map_origin: Vector2 = Vector2.ZERO
 @export var map_size: Vector2 = Vector2(8192, 8192)
@@ -103,20 +100,23 @@ func _ready() -> void:
 			timekeeper.resumed.connect(_on_timekeeper_resumed)
 
 	# Initialize combat UIs
-	if encounter_ui_scene != null:
-		_encounter_ui = encounter_ui_scene.instantiate() as Control
-		add_child(_encounter_ui)
-		_encounter_ui.combat_ended.connect(_on_combat_ended)
-		_encounter_ui.retreat_pressed.connect(_on_encounter_retreat)
+	var encounter_ui_scene: PackedScene = preload("res://UI/EncounterUI.tscn")
+	_encounter_ui = encounter_ui_scene.instantiate() as Control
+	add_child(_encounter_ui)
+	_encounter_ui.combat_ended.connect(_on_combat_ended)
+	_encounter_ui.retreat_pressed.connect(_on_encounter_retreat)
+	print("[Overworld] EncounterUI instantiated and connected")
 
-	if loot_ui_scene != null:
-		_loot_ui = loot_ui_scene.instantiate() as Control
-		add_child(_loot_ui)
-		_loot_ui.loot_closed.connect(_on_loot_closed)
+	var loot_ui_scene: PackedScene = preload("res://UI/LootUI.tscn")
+	_loot_ui = loot_ui_scene.instantiate() as Control
+	add_child(_loot_ui)
+	_loot_ui.loot_closed.connect(_on_loot_closed)
+	print("[Overworld] LootUI instantiated and connected")
 
-	if game_over_ui_scene != null:
-		_game_over_ui = game_over_ui_scene.instantiate() as Control
-		add_child(_game_over_ui)
+	var game_over_ui_scene: PackedScene = preload("res://UI/GameOverUI.tscn")
+	_game_over_ui = game_over_ui_scene.instantiate() as Control
+	add_child(_game_over_ui)
+	print("[Overworld] GameOverUI instantiated and connected")
 
 	# Connect any pre-existing caravan signals
 	for caravan in get_tree().get_nodes_in_group("caravans"):

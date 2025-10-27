@@ -19,15 +19,19 @@ func _ready() -> void:
 
 ## Opens the encounter UI and starts automatic combat
 func open_encounter(attacker: Node2D, defender: Node2D) -> void:
+	print("[EncounterUI] Opening encounter between %s and %s" % [attacker.name, defender.name])
 	_attacker = attacker
 	_defender = defender
 	_combat_active = true
 	show()
+	print("[EncounterUI] UI shown, pausing game...")
 
 	var timekeeper: Node = get_node_or_null("/root/Timekeeper")
 	if timekeeper != null and timekeeper.has_method("pause"):
 		timekeeper.pause()
+		print("[EncounterUI] Game paused")
 
+	print("[EncounterUI] Starting combat loop...")
 	_start_combat_loop()
 
 ## Closes the encounter UI

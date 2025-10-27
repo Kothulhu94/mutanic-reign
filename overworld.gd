@@ -156,6 +156,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			if bus == null:
 				return
 
+			# Cancel any active chase
+			if _player_bus != null and _player_bus.get_chase_target() != null:
+				_player_bus.chase_target(null)
+
 			# Snap both endpoints to the navmesh
 			var start_on_nav: Vector2 = _snap_to_nav(bus.global_position)
 			var click_pos: Vector2 = get_global_mouse_position()
@@ -451,8 +455,12 @@ func _on_chase_initiated(caravan_actor: Caravan) -> void:
 		_player_bus.chase_target(caravan_actor)
 
 func _on_encounter_initiated(attacker: Node2D, defender: Node2D) -> void:
+	print("[Overworld] Encounter initiated between %s and %s" % [attacker.name, defender.name])
 	if _encounter_ui != null:
+		print("[Overworld] Opening EncounterUI")
 		_encounter_ui.open_encounter(attacker, defender)
+	else:
+		print("[Overworld] ERROR: _encounter_ui is null!")
 
 func _on_combat_ended(attacker: Node2D, defender: Node2D, winner: Node2D) -> void:
 	if _encounter_ui != null:

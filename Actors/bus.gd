@@ -16,7 +16,7 @@ var money: int = 1000
 @export var max_stack_size: int = 100
 var _health_visual: Control
 var _chase_target: Node2D = null
-const ENCOUNTER_DISTANCE: float = 30.0
+const ENCOUNTER_DISTANCE: float = 60.0
 ## Checks if a specific amount of an item can be added without exceeding limits.
 func can_add_item(item_id: StringName, amount: int) -> bool:
 	if amount <= 0:
@@ -88,7 +88,7 @@ func _ready() -> void:
 	_health_visual = health_visual_scene.instantiate() as Control
 	if _health_visual != null:
 		add_child(_health_visual)
-		_health_visual.position = Vector2(-18, -20)
+		_health_visual.position = Vector2(-18, -35)
 		charactersheet.health_changed.connect(_on_health_changed)
 		_on_health_changed(charactersheet.current_health, charactersheet.get_effective_health())
 
@@ -113,6 +113,7 @@ func _physics_process(_delta: float) -> void:
 			var target: Node2D = _chase_target
 			_chase_target = null
 			velocity = Vector2.ZERO
+			print("[Bus] Encounter triggered! Distance: %.1f" % distance_to_target)
 			encounter_initiated.emit(self, target)
 			return
 

@@ -74,7 +74,7 @@ func setup(home: Hub, state: CaravanState, db: ItemDB, hubs: Array[Hub]) -> void
 		_health_visual = health_visual_scene.instantiate() as Control
 		if _health_visual != null:
 			add_child(_health_visual)
-			_health_visual.position = Vector2(-18, -20)
+			_health_visual.position = Vector2(-18, -35)
 			caravan_state.leader_sheet.health_changed.connect(_on_health_changed)
 			_on_health_changed(caravan_state.leader_sheet.current_health, caravan_state.leader_sheet.get_effective_health())
 

@@ -5,7 +5,72 @@ class_name Bus
 @export var move_speed := 200.0
 var charactersheet: CharacterSheet
 var _is_paused: bool = false
+var inventory: Dictionary = {}  
+var money: int = 1000     
+@export var max_unique_stacks: int = 16  
+@export var max_stack_size: int = 100
+## Checks if a specific amount of an item can be added without exceeding limits.
+func can_add_item(item_id: StringName, amount: int) -> bool:
+	if amount <= 0:
+		return true # Adding zero or negative is always "possible" logically
 
+	var current_amount: int = inventory.get(item_id, 0)
+	var is_new_stack: bool = not inventory.has(item_id) or current_amount == 0
+
+	# Check 1: Max stack size for this specific item
+	if current_amount + amount > max_stack_size:
+		print("Cannot add %d %s: Exceeds max stack size (%d)." % [amount, item_id, max_stack_size])
+		return false
+
+	# Check 2: Max unique stacks if this is a new item type
+	if is_new_stack and inventory.size() >= max_unique_stacks:
+		print("Cannot add %s: Exceeds max unique stacks (%d)." % [item_id, max_unique_stacks])
+		return false
+
+	# If checks pass, it's possible to add
+	return true
+
+
+## Adds a specified amount of an item to the inventory, respecting limits.
+## Returns true if successful, false otherwise.
+func add_item(item_id: StringName, amount: int) -> bool:
+	if amount <= 0:
+		push_warning("add_item: Cannot add zero or negative amount.")
+		return false # Or true? Depends on desired behavior for zero/negative.
+
+	if can_add_item(item_id, amount):
+		inventory[item_id] = inventory.get(item_id, 0) + amount
+		print("Added %d %s. New total: %d" % [amount, item_id, inventory[item_id]])
+		# TODO: Emit a signal if UI needs to update inventory display
+		# inventory_changed.emit()
+		return true
+	else:
+		# can_add_item already printed the reason
+		return false
+
+
+## Removes a specified amount of an item from the inventory.
+## Returns true if successful, false otherwise (e.g., not enough items).
+func remove_item(item_id: StringName, amount: int) -> bool:
+	if amount <= 0:
+		push_warning("remove_item: Cannot remove zero or negative amount.")
+		return false
+
+	var current_amount: int = inventory.get(item_id, 0)
+
+	if current_amount < amount:
+		print("Cannot remove %d %s: Only have %d." % [amount, item_id, current_amount])
+		return false
+	else:
+		inventory[item_id] = current_amount - amount
+		print("Removed %d %s. Remaining: %d" % [amount, item_id, inventory[item_id]])
+		# Remove the key if the amount becomes zero (optional, keeps inventory clean)
+		if inventory[item_id] == 0:
+			inventory.erase(item_id)
+		# TODO: Emit a signal if UI needs to update inventory display
+		# inventory_changed.emit()
+		return true   
+ 
 func _ready() -> void:
 	charactersheet = CharacterSheet.new()
 	# Connect to Timekeeper pause/resume signals

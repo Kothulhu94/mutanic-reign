@@ -62,10 +62,10 @@ func _populate_ui() -> void:
 		title_label.text = "Victory! Take Your Loot"
 
 	if player_name_label != null:
-		player_name_label.text = player_actor.name if player_actor.has("name") else "Player"
+		player_name_label.text = player_actor.name if player_actor.get("name") != null else "Player"
 
 	if defeated_name_label != null:
-		defeated_name_label.text = defeated_actor.name if defeated_actor.has("name") else "Defeated"
+		defeated_name_label.text = defeated_actor.name if defeated_actor.get("name") != null else "Defeated"
 
 	_populate_player_list()
 	_populate_defeated_list()
@@ -77,7 +77,7 @@ func _populate_player_list() -> void:
 	for child in player_item_list.get_children():
 		child.queue_free()
 
-	if not player_actor.has("inventory"):
+	if player_actor.get("inventory") == null:
 		return
 
 	var sorted_items: Array[StringName] = []
@@ -117,10 +117,13 @@ func _get_defeated_inventory() -> Dictionary:
 	if defeated_actor == null:
 		return {}
 
-	if defeated_actor.has("inventory"):
-		return defeated_actor.inventory
-	elif defeated_actor.has("caravan_state") and defeated_actor.caravan_state != null:
-		return defeated_actor.caravan_state.inventory
+	var inventory: Variant = defeated_actor.get("inventory")
+	if inventory != null:
+		return inventory
+
+	var caravan_state: Variant = defeated_actor.get("caravan_state")
+	if caravan_state != null and caravan_state.get("inventory") != null:
+		return caravan_state.inventory
 
 	return {}
 
@@ -157,5 +160,7 @@ func _remove_from_defeated(item_id: StringName, amount: int) -> void:
 
 	if defeated_actor.has_method("remove_item"):
 		defeated_actor.remove_item(item_id, amount)
-	elif defeated_actor.has("caravan_state") and defeated_actor.caravan_state != null:
-		defeated_actor.caravan_state.remove_item(item_id, amount)
+	else:
+		var caravan_state: Variant = defeated_actor.get("caravan_state")
+		if caravan_state != null and caravan_state.has_method("remove_item"):
+			caravan_state.remove_item(item_id, amount)

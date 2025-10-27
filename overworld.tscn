@@ -1,4 +1,4 @@
-[gd_scene load_steps=542 format=3 uid="uid://bn7il32yep7nb"]
+[gd_scene load_steps=543 format=3 uid="uid://bn7il32yep7nb"]
 
 [ext_resource type="Script" uid="uid://c7s2t2bplv8mh" path="res://overworld.gd" id="1_overworld"]
 [ext_resource type="Script" uid="uid://c13gtnisdmqyn" path="res://scripts/chunker.gd" id="2_nyb65"]
@@ -1442,16 +1442,22 @@ agent_radius = 0.0
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_7xccm"]
 resource_local_to_scene = true
-vertices = PackedVector2Array(0, 0, 512, 0, 512, 512, 0, 512)
-polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
-outlines = Array[PackedVector2Array]([PackedVector2Array(0, 0, 512, 0, 512, 512, 0, 512)])
+vertices = PackedVector2Array(249.33594, 105.33594, 174.66406, 0, 512, 0, 512, 442.66406, 276, 154.66406, 281.33594, 196, 266.66406, 261.33594, 240, 309.33594, 494.66406, 492, 480, 512, 408, 512, 338.66406, 468, 260, 512, 0, 512, 0, 444, 137.33594, 396, 312, 472, 354.66406, 512, 324, 512, 332, 502.66406, 341.33594, 502.66406)
+polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 0, 3), PackedInt32Array(5, 4, 3), PackedInt32Array(6, 5, 3), PackedInt32Array(7, 6, 3, 8, 9, 10, 11), PackedInt32Array(12, 13, 14, 15), PackedInt32Array(12, 15, 7, 16), PackedInt32Array(7, 11, 16), PackedInt32Array(17, 18, 19, 20)])
+outlines = Array[PackedVector2Array]([PackedVector2Array(0, 0, 512, 0, 512, 512, 0, 512), PackedVector2Array(0, 0, 0, 444, 137.3335, 396, 240, 309.3335, 266.66675, 261.3335, 281.3335, 196, 276, 154.66699, 249.3335, 105.333496, 174.66675, 0), PackedVector2Array(332, 502.667, 341.3335, 502.667, 354.66675, 512, 408, 512, 338.66675, 468, 312, 472, 260, 512, 324, 512), PackedVector2Array(494.66675, 492, 480, 512, 512, 512, 512, 442.667)])
 agent_radius = 0.0
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_ftww2"]
 resource_local_to_scene = true
-vertices = PackedVector2Array(0, 0, 512, 0, 512, 512, 0, 512)
-polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
-outlines = Array[PackedVector2Array]([PackedVector2Array(0, 0, 512, 0, 512, 512, 0, 512)])
+vertices = PackedVector2Array(512, 0, 512, 512, 20, 512, 22.664063, 481.33594, 180, 222.66406, 272, 100, 330.66406, 0, 128, 234.66406, 0, 442.66406, 0, 0, 289.33594, 0, 217.33594, 116)
+polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3, 4, 5), PackedInt32Array(0, 5, 6), PackedInt32Array(7, 8, 9), PackedInt32Array(9, 10, 11, 7)])
+outlines = Array[PackedVector2Array]([PackedVector2Array(0, 0, 512, 0, 512, 512, 0, 512), PackedVector2Array(289.3335, 0, 217.3335, 116, 128, 234.66699, 0, 442.667, 0, 512, 20, 512, 22.666748, 481.3335, 180, 222.66699, 272, 100, 330.66675, 0)])
+agent_radius = 0.0
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_nk7ik"]
+vertices = PackedVector2Array(217.33594, 116, 289.33594, 0, 330.66406, 0, 272, 100, 180, 222.66406, 0, 442.66406, 128, 234.66406, 22.664063, 481.33594, 0, 512, 20, 512)
+polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3, 4), PackedInt32Array(5, 6, 0, 4, 7, 8), PackedInt32Array(8, 7, 9)])
+outlines = Array[PackedVector2Array]([PackedVector2Array(0, 442.667, 0, 512, 20, 512, 22.666748, 481.3335, 180, 222.66699, 272, 100, 330.66675, 0, 289.3335, 0, 217.3335, 116, 128, 234.66699)])
 agent_radius = 0.0
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_8aius"]
@@ -1567,7 +1573,7 @@ agent_radius = 0.0
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_bcded"]
 resource_local_to_scene = true
-vertices = PackedVector2Array(0, 0, 512, 0, 512, 512, 0, 512)
+vertices = PackedVector2Array(512, 512, 0, 512, 0, 0, 512, 0)
 polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
 outlines = Array[PackedVector2Array]([PackedVector2Array(0, 0, 512, 0, 512, 512, 0, 512)])
 agent_radius = 0.0
@@ -3537,6 +3543,12 @@ centered = false
 
 [node name="Nav_7_9" type="NavigationRegion2D" parent="Chunker/Sprite_7_9"]
 navigation_polygon = SubResource("NavigationPolygon_ftww2")
+
+[node name="NavigationRegion2D" type="NavigationRegion2D" parent="Chunker/Sprite_7_9"]
+navigation_polygon = SubResource("NavigationPolygon_nk7ik")
+navigation_layers = 3
+enter_cost = 2.0
+travel_cost = 2.0
 
 [node name="Sprite_8_9" type="Sprite2D" parent="Chunker"]
 position = Vector2(4096, 4608)

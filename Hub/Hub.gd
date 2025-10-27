@@ -93,6 +93,8 @@ func _ready() -> void:
 	if market_ui != null:
 		if market_ui.has_signal("market_closed"):
 			market_ui.market_closed.connect(_on_market_closed)
+		if market_ui.has_signal("transaction_confirmed"):
+			market_ui.transaction_confirmed.connect(_on_transaction_confirmed)
 
 func _on_timekeeper_tick(dt: float) -> void:
 	# Gather buildings list
@@ -305,13 +307,88 @@ func _on_market_opened() -> void:
 		push_warning("Hub %s has no MarketUI assigned" % name)
 		return
 
-	market_ui.open_market(self)
+	# Get bus reference from the overworld scene
+	var bus_ref: Bus = _get_bus_from_scene_tree()
+	if bus_ref == null:
+		push_warning("Hub %s cannot find Bus in scene tree" % name)
+		return
+
+	market_ui.open(bus_ref, self)
 
 func _on_market_closed() -> void:
 	# Only respond if this hub was the one that opened the market
 	if market_ui != null and market_ui.current_hub == self:
 		# Market closed, game resumed automatically by MarketUI
 		pass
+
+func _get_bus_from_scene_tree() -> Bus:
+	var root: Window = get_tree().root
+	if root == null:
+		return null
+
+	var overworld: Node = root.get_node_or_null("Overworld")
+	if overworld == null:
+		return null
+
+	var bus_node: Node = overworld.get("bus")
+	if bus_node != null and bus_node is Bus:
+		return bus_node as Bus
+
+	return null
+
+func _on_transaction_confirmed(cart: Array[Dictionary]) -> void:
+	var bus_ref: Bus = _get_bus_from_scene_tree()
+	if bus_ref == null:
+		push_error("Hub %s: Cannot process transaction - Bus not found" % name)
+		return
+
+	for entry: Dictionary in cart:
+		var item_id: StringName = entry.get("item_id", StringName())
+		var buy_qty: int = int(entry.get("buy_qty", 0))
+		var sell_qty: int = int(entry.get("sell_qty", 0))
+		var unit_price: float = float(entry.get("unit_price", 0.0))
+
+		if buy_qty > 0:
+			var cost: int = int(ceil(float(buy_qty) * unit_price))
+
+			if bus_ref.money < cost:
+				push_warning("Hub %s: Player cannot afford to buy %d %s" % [name, buy_qty, item_id])
+				continue
+
+			if state.inventory.get(item_id, 0) < buy_qty:
+				push_warning("Hub %s: Not enough %s in hub inventory" % [name, item_id])
+				continue
+
+			var cur_float: float = float(_inventory_float.get(item_id, float(state.inventory.get(item_id, 0))))
+			cur_float -= float(buy_qty)
+			_inventory_float[item_id] = cur_float
+			state.inventory[item_id] = int(floor(cur_float))
+			if state.inventory[item_id] <= 0:
+				state.inventory.erase(item_id)
+
+			if not bus_ref.add_item(item_id, buy_qty):
+				push_warning("Hub %s: Failed to add %d %s to player inventory" % [name, buy_qty, item_id])
+				continue
+
+			bus_ref.money -= cost
+			state.money += cost
+
+		if sell_qty > 0:
+			var revenue: int = int(floor(float(sell_qty) * unit_price))
+
+			if bus_ref.inventory.get(item_id, 0) < sell_qty:
+				push_warning("Hub %s: Player doesn't have %d %s to sell" % [name, sell_qty, item_id])
+				continue
+
+			if not bus_ref.remove_item(item_id, sell_qty):
+				push_warning("Hub %s: Failed to remove %d %s from player inventory" % [name, sell_qty, item_id])
+				continue
+
+			var delta: Dictionary = {item_id: sell_qty}
+			_apply_inventory_delta(delta)
+
+			bus_ref.money += revenue
+			state.money -= revenue
 
 # -------------------------------------------------------------------
 # Pricing helpers (EMA-based consumption -> dynamic prices)

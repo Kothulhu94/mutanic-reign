@@ -13,6 +13,9 @@ class_name CharacterSheet
 @export var base_health: int = 100
 @export var base_damage: int = 10
 @export var base_defense: int = 5
+@export var attribute_health_multiplier: int = 5
+@export var attribute_damage_multiplier: int = 5
+@export var attribute_defense_multiplier: int = 5
 ## Core progression components
 @export var attributes: CharacterAttributes
 ## Dictionary of learned skills: { skill_id (StringName) -> SkillSpec instance }
@@ -25,16 +28,19 @@ func _init() -> void:
 # --- Stat Calculation Functions ---
 
 func get_effective_health() -> int:
-	# TODO: Calculate based on base_health + attribute/skill modifiers
-	return base_health
+	var might_level: int = attributes.get_attribute_level(&"Might")
+	var willpower_level: int = attributes.get_attribute_level(&"Willpower")
+	return base_health + (might_level * attribute_health_multiplier) + (willpower_level * attribute_health_multiplier)
 
 func get_effective_damage() -> int:
-	# TODO: Calculate based on base_damage + attribute/skill modifiers
-	return base_damage
+	var might_level: int = attributes.get_attribute_level(&"Might")
+	var guile_level: int = attributes.get_attribute_level(&"Guile")
+	return base_damage + (might_level * attribute_damage_multiplier) + (guile_level * attribute_damage_multiplier)
 
 func get_effective_defense() -> int:
-	# TODO: Calculate based on base_defense + attribute/skill modifiers
-	return base_defense
+	var guile_level: int = attributes.get_attribute_level(&"Guile")
+	var intellect_level: int = attributes.get_attribute_level(&"Intellect")
+	return base_defense + (guile_level * attribute_defense_multiplier) + (intellect_level * attribute_defense_multiplier)
 # Example for speed - Needs base speed source (like CaravanType or player base speed)
 # func get_effective_speed(base_speed : float) -> float:
 # 	var speed_mod = attributes.get_modifier("agility") # Example attribute

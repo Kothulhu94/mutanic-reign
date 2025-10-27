@@ -62,10 +62,10 @@ func _populate_ui() -> void:
 		title_label.text = "Victory! Take Your Loot"
 
 	if player_name_label != null:
-		player_name_label.text = player_actor.name if player_actor.get("name") != null else "Player"
+		player_name_label.text = player_actor.name
 
 	if defeated_name_label != null:
-		defeated_name_label.text = defeated_actor.name if defeated_actor.get("name") != null else "Defeated"
+		defeated_name_label.text = defeated_actor.name
 
 	_populate_player_list()
 	_populate_defeated_list()

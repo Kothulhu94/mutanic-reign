@@ -461,6 +461,6 @@ func _on_encounter_exit() -> void:
 	if _encounter_ui != null:
 		_encounter_ui.close_ui()
 
-func _on_loot_closed(defeated_actor: Node2D) -> void:
+func _on_loot_closed(_defeated_actor: Node2D) -> void:
 	# Actor already removed in _on_combat_ended
 	pass

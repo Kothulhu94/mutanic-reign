@@ -3,87 +3,71 @@ class_name EncounterUI
 
 ## Emitted when combat concludes (win, loss, or retreat)
 signal combat_ended(attacker: Node2D, defender: Node2D, winner: Node2D)
-## Emitted when retreat button is pressed
-signal retreat_pressed()
+## Emitted when exit button is pressed
+signal exit_pressed()
 
-@onready var retreat_button: Button = $Panel/VBoxContainer/RetreatButton
+@onready var attack_button: Button = $Panel/VBoxContainer/AttackButton
+@onready var exit_button: Button = $Panel/VBoxContainer/ExitButton
 
 var _attacker: Node2D = null
 var _defender: Node2D = null
-var _combat_active: bool = false
 
 func _ready() -> void:
 	hide()
-	if retreat_button != null:
-		retreat_button.pressed.connect(_on_retreat_pressed)
+	if attack_button != null:
+		attack_button.pressed.connect(_on_attack_pressed)
+	if exit_button != null:
+		exit_button.pressed.connect(_on_exit_pressed)
 
-## Opens the encounter UI and starts automatic combat
+## Opens the encounter UI for manual combat
 func open_encounter(attacker: Node2D, defender: Node2D) -> void:
 	print("[EncounterUI] Opening encounter between %s and %s" % [attacker.name, defender.name])
 	_attacker = attacker
 	_defender = defender
-	_combat_active = true
 	show()
 	print("[EncounterUI] UI shown, pausing game...")
 
 	var timekeeper: Node = get_node_or_null("/root/Timekeeper")
 	if timekeeper != null and timekeeper.has_method("pause"):
 		timekeeper.pause()
-		print("[EncounterUI] Game paused")
-
-	print("[EncounterUI] Starting combat loop...")
-	_start_combat_loop()
+		print("[EncounterUI] Game paused, waiting for player action...")
 
 ## Closes the encounter UI
 func close_ui() -> void:
-	_combat_active = false
 	hide()
 
 	var timekeeper: Node = get_node_or_null("/root/Timekeeper")
 	if timekeeper != null and timekeeper.has_method("resume"):
 		timekeeper.resume()
 
-func _on_retreat_pressed() -> void:
-	_combat_active = false
-	retreat_pressed.emit()
-	close_ui()
-
-## Automatic combat loop - runs rounds until one actor is defeated
-func _start_combat_loop() -> void:
-	while _combat_active:
-		await get_tree().create_timer(0.5).timeout
-
-		if not _combat_active:
-			break
-
-		var combat_manager: Node = get_node_or_null("/root/CombatManager")
-		if combat_manager != null and combat_manager.has_method("resolve_combat_round"):
-			combat_manager.resolve_combat_round(_attacker, _defender)
-
-		if not _check_combat_continues():
-			break
-
-## Checks if combat should continue or if someone has been defeated
-func _check_combat_continues() -> bool:
+func _on_attack_pressed() -> void:
 	if _attacker == null or _defender == null:
-		_combat_active = false
-		return false
+		return
 
-	var attacker_sheet: CharacterSheet = _attacker.charactersheet if _attacker.has("charactersheet") else null
-	var defender_sheet: CharacterSheet = _defender.charactersheet if _defender.has("charactersheet") else null
+	print("[EncounterUI] Player chose Attack")
+
+	# Resolve one combat round
+	var combat_manager: Node = get_node_or_null("/root/CombatManager")
+	if combat_manager != null and combat_manager.has_method("resolve_combat_round"):
+		combat_manager.resolve_combat_round(_attacker, _defender)
+
+	# Check if combat is over
+	var attacker_sheet: CharacterSheet = _attacker.get("charactersheet")
+	var defender_sheet: CharacterSheet = _defender.get("charactersheet")
 
 	if attacker_sheet == null or defender_sheet == null:
-		_combat_active = false
-		return false
+		return
 
 	if attacker_sheet.current_health <= 0:
-		_combat_active = false
+		print("[EncounterUI] Attacker defeated!")
 		combat_ended.emit(_attacker, _defender, _defender)
-		return false
-
-	if defender_sheet.current_health <= 0:
-		_combat_active = false
+		close_ui()
+	elif defender_sheet.current_health <= 0:
+		print("[EncounterUI] Defender defeated!")
 		combat_ended.emit(_attacker, _defender, _attacker)
-		return false
+		close_ui()
 
-	return true
+func _on_exit_pressed() -> void:
+	print("[EncounterUI] Player chose Exit")
+	exit_pressed.emit()
+	close_ui()

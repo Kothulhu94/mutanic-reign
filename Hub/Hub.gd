@@ -264,9 +264,8 @@ func sell_to_hub(item_id: StringName, amount: int, _caravan_state: CaravanState)
 # Area callbacks (optional)
 # -------------------------------------------------------------------
 func _on_actor_entered(actor: Node) -> void:
-	# Check if it's the Bus entering for the first time
-	if not _has_been_visited and _is_bus(actor):
-		_has_been_visited = true
+	# Show hub menu when Bus enters proximity area
+	if _is_bus(actor):
 		_show_hub_menu()
 
 func _on_actor_exited(_actor: Node) -> void:

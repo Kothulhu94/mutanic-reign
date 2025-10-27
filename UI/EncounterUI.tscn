@@ -36,9 +36,13 @@ theme_override_constants/separation = 10
 
 [node name="CombatLabel" type="Label" parent="Panel/VBoxContainer"]
 layout_mode = 2
-text = "Combat In Progress!"
+text = "Encounter!"
 horizontal_alignment = 1
 
-[node name="RetreatButton" type="Button" parent="Panel/VBoxContainer"]
+[node name="AttackButton" type="Button" parent="Panel/VBoxContainer"]
 layout_mode = 2
-text = "Retreat"
+text = "Attack"
+
+[node name="ExitButton" type="Button" parent="Panel/VBoxContainer"]
+layout_mode = 2
+text = "Exit"

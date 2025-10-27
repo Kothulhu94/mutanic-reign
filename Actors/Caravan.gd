@@ -13,6 +13,7 @@ signal player_initiated_chase(caravan_actor: Caravan)
 var caravan_state: CaravanState = null
 var home_hub: Hub = null
 var current_target_hub: Hub = null
+var _is_paused: bool = false
 
 # Health visual
 var _health_visual: Control
@@ -59,6 +60,14 @@ func _ready() -> void:
 	# Connect input event signal for clicking
 	input_event.connect(_on_input_event)
 
+	# Connect to Timekeeper pause/resume signals
+	var timekeeper: Node = get_node_or_null("/root/Timekeeper")
+	if timekeeper != null:
+		if timekeeper.has_signal("paused"):
+			timekeeper.paused.connect(_on_timekeeper_paused)
+		if timekeeper.has_signal("resumed"):
+			timekeeper.resumed.connect(_on_timekeeper_resumed)
+
 func setup(home: Hub, state: CaravanState, db: ItemDB, hubs: Array[Hub]) -> void:
 	home_hub = home
 	caravan_state = state
@@ -97,6 +106,10 @@ func setup(home: Hub, state: CaravanState, db: ItemDB, hubs: Array[Hub]) -> void
 	_transition_to(State.BUYING_AT_HOME)
 
 func _process(delta: float) -> void:
+	# Don't process AI if paused
+	if _is_paused:
+		return
+
 	match current_state:
 		State.IDLE:
 			_state_idle()
@@ -433,3 +446,9 @@ func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> voi
 func _on_health_changed(new_health: int, max_health: int) -> void:
 	if _health_visual != null:
 		_health_visual.update_health(new_health, max_health)
+
+func _on_timekeeper_paused() -> void:
+	_is_paused = true
+
+func _on_timekeeper_resumed() -> void:
+	_is_paused = false

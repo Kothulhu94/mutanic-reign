@@ -102,29 +102,35 @@ func _ready() -> void:
 	# Initialize combat UIs with CanvasLayers for proper rendering
 	var encounter_canvas: CanvasLayer = CanvasLayer.new()
 	encounter_canvas.layer = 10
+	encounter_canvas.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(encounter_canvas)
 
 	var encounter_ui_scene: PackedScene = preload("res://UI/EncounterUI.tscn")
 	_encounter_ui = encounter_ui_scene.instantiate() as Control
+	_encounter_ui.process_mode = Node.PROCESS_MODE_ALWAYS
 	encounter_canvas.add_child(_encounter_ui)
 	_encounter_ui.combat_ended.connect(_on_combat_ended)
 	_encounter_ui.exit_pressed.connect(_on_encounter_exit)
 
 	var loot_canvas: CanvasLayer = CanvasLayer.new()
 	loot_canvas.layer = 10
+	loot_canvas.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(loot_canvas)
 
 	var loot_ui_scene: PackedScene = preload("res://UI/LootUI.tscn")
 	_loot_ui = loot_ui_scene.instantiate() as Control
+	_loot_ui.process_mode = Node.PROCESS_MODE_ALWAYS
 	loot_canvas.add_child(_loot_ui)
 	_loot_ui.loot_closed.connect(_on_loot_closed)
 
 	var game_over_canvas: CanvasLayer = CanvasLayer.new()
 	game_over_canvas.layer = 10
+	game_over_canvas.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(game_over_canvas)
 
 	var game_over_ui_scene: PackedScene = preload("res://UI/GameOverUI.tscn")
 	_game_over_ui = game_over_ui_scene.instantiate() as Control
+	_game_over_ui.process_mode = Node.PROCESS_MODE_ALWAYS
 	game_over_canvas.add_child(_game_over_ui)
 
 	# Connect any pre-existing caravan signals

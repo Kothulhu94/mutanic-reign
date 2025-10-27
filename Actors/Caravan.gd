@@ -15,7 +15,6 @@ var home_hub: Hub = null
 var current_target_hub: Hub = null
 
 # Health visual
-@export var health_visual_scene: PackedScene
 var _health_visual: Control
 
 # Skill-based bonuses (calculated once at setup)
@@ -71,13 +70,13 @@ func setup(home: Hub, state: CaravanState, db: ItemDB, hubs: Array[Hub]) -> void
 		caravan_state.leader_sheet.initialize_health()
 
 		# Set up health visual
-		if health_visual_scene != null:
-			_health_visual = health_visual_scene.instantiate() as Control
-			if _health_visual != null:
-				add_child(_health_visual)
-				_health_visual.position = Vector2(-18, -20)
-				caravan_state.leader_sheet.health_changed.connect(_on_health_changed)
-				_on_health_changed(caravan_state.leader_sheet.current_health, caravan_state.leader_sheet.get_effective_health())
+		var health_visual_scene: PackedScene = preload("res://UI/ActorHealthVisual.tscn")
+		_health_visual = health_visual_scene.instantiate() as Control
+		if _health_visual != null:
+			add_child(_health_visual)
+			_health_visual.position = Vector2(-18, -20)
+			caravan_state.leader_sheet.health_changed.connect(_on_health_changed)
+			_on_health_changed(caravan_state.leader_sheet.current_health, caravan_state.leader_sheet.get_effective_health())
 
 		# Apply skill bonuses if leader has skills
 		_apply_skill_bonuses()

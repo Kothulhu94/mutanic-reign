@@ -70,6 +70,7 @@ func _ready() -> void:
 	# Connect bus signals
 	if _player_bus != null:
 		_player_bus.encounter_initiated.connect(_on_encounter_initiated)
+		_player_bus.chase_started.connect(_on_chase_started)
 
 	# Spawn Camera
 	cam = camera_scene.instantiate() as Camera2D
@@ -426,6 +427,13 @@ func _on_timekeeper_resumed() -> void:
 # -------------------------------------------------------------------
 # Combat System Callbacks
 # -------------------------------------------------------------------
+func _on_chase_started() -> void:
+	# Clear pathline when starting a chase
+	_path_world.clear()
+	if path_line != null:
+		path_line.points = PackedVector2Array()
+		path_line.visible = false
+
 func _on_chase_initiated(caravan_actor: Caravan) -> void:
 	if _player_bus != null:
 		_player_bus.chase_target(caravan_actor)

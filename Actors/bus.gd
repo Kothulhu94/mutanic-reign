@@ -1,14 +1,22 @@
 extends CharacterBody2D
 class_name Bus
 
+## Emitted when the bus collides with a chase target
+signal encounter_initiated(attacker: Node2D, defender: Node2D)
+## Emitted when chase starts
+signal chase_started()
+
 @onready var agent: NavigationAgent2D = $NavigationAgent2D
 @export var move_speed := 200.0
 var charactersheet: CharacterSheet
 var _is_paused: bool = false
-var inventory: Dictionary = {}  
-var money: int = 1000     
-@export var max_unique_stacks: int = 16  
+var inventory: Dictionary = {}
+var money: int = 1000
+@export var max_unique_stacks: int = 16
 @export var max_stack_size: int = 100
+var _health_visual: Control
+var _chase_target: Node2D = null
+const ENCOUNTER_DISTANCE: float = 60.0
 ## Checks if a specific amount of an item can be added without exceeding limits.
 func can_add_item(item_id: StringName, amount: int) -> bool:
 	if amount <= 0:
@@ -73,6 +81,17 @@ func remove_item(item_id: StringName, amount: int) -> bool:
  
 func _ready() -> void:
 	charactersheet = CharacterSheet.new()
+	charactersheet.initialize_health()
+
+	# Create and add health visual
+	var health_visual_scene: PackedScene = preload("res://UI/ActorHealthVisual.tscn")
+	_health_visual = health_visual_scene.instantiate() as Control
+	if _health_visual != null:
+		add_child(_health_visual)
+		_health_visual.position = Vector2(-18, -35)
+		charactersheet.health_changed.connect(_on_health_changed)
+		_on_health_changed(charactersheet.current_health, charactersheet.get_effective_health())
+
 	# Connect to Timekeeper pause/resume signals
 	var timekeeper: Node = get_node_or_null("/root/Timekeeper")
 	if timekeeper != null:
@@ -86,6 +105,21 @@ func _physics_process(_delta: float) -> void:
 	if _is_paused:
 		velocity = Vector2.ZERO
 		return
+
+	# Check if we've reached the chase target
+	if _chase_target != null:
+		var distance_to_target: float = global_position.distance_to(_chase_target.global_position)
+		if distance_to_target <= ENCOUNTER_DISTANCE:
+			var target: Node2D = _chase_target
+			_chase_target = null
+			velocity = Vector2.ZERO
+			print("[Bus] Encounter triggered! Distance: %.1f" % distance_to_target)
+			encounter_initiated.emit(self, target)
+			return
+
+		# Update navigation target if chasing
+		if agent != null:
+			agent.target_position = _chase_target.global_position
 
 	if agent:
 		var next := agent.get_next_path_position()
@@ -104,3 +138,16 @@ func _on_timekeeper_paused() -> void:
 
 func _on_timekeeper_resumed() -> void:
 	_is_paused = false
+
+func _on_health_changed(new_health: int, max_health: int) -> void:
+	if _health_visual != null:
+		_health_visual.update_health(new_health, max_health)
+
+## Initiates chase of a target node
+func chase_target(target: Node2D) -> void:
+	_chase_target = target
+	chase_started.emit()
+
+## Returns the current chase target, or null if not chasing
+func get_chase_target() -> Node2D:
+	return _chase_target

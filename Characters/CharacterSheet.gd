@@ -21,6 +21,11 @@ class_name CharacterSheet
 ## Dictionary of learned skills: { skill_id (StringName) -> SkillSpec instance }
 var skills: Dictionary = {}
 
+## Current health tracking for combat
+var current_health: int = 0
+
+## Emitted when health changes during combat
+signal health_changed(new_health: int, max_health: int)
 
 func _init() -> void:
 	attributes = CharacterAttributes.new()
@@ -152,3 +157,15 @@ func from_dict(data: Dictionary) -> void:
 				new_skill_spec.from_dict(skill_data)
 				# Use the loaded skill_id as the key
 				skills[new_skill_spec.skill_id] = new_skill_spec
+
+
+## Initializes current health to maximum effective health
+func initialize_health() -> void:
+	current_health = get_effective_health()
+
+
+## Applies damage to the character and emits health_changed signal
+func apply_damage(damage: int) -> void:
+	current_health -= damage
+	current_health = maxi(current_health, 0)
+	health_changed.emit(current_health, get_effective_health())

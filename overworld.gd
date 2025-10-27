@@ -32,6 +32,11 @@ var _path_world: PackedVector2Array = PackedVector2Array()
 var _is_paused: bool = false
 @onready var path_line: Line2D = get_node_or_null("PathLine")
 
+var _player_bus: Bus
+var _encounter_ui: Control
+var _loot_ui: Control
+var _game_over_ui: Control
+
 func _ready() -> void:
 	await _await_nav_ready()
 
@@ -45,6 +50,7 @@ func _ready() -> void:
 	# Spawn Bus
 	bus = bus_scene.instantiate() as CharacterBody2D
 	add_child(bus)
+	_player_bus = bus as Bus
 
 	# Spawn position snapped to the navmesh (fallback to base if nav has no point)
 	var spawn_base: Vector2 = map_origin + bus_spawn_point
@@ -57,6 +63,11 @@ func _ready() -> void:
 	if _agent != null:
 		_agent.navigation_layers = NAV_LAYERS
 		_agent.target_position = final_position
+
+	# Connect bus signals
+	if _player_bus != null:
+		_player_bus.encounter_initiated.connect(_on_encounter_initiated)
+		_player_bus.chase_started.connect(_on_chase_started)
 
 	# Spawn Camera
 	cam = camera_scene.instantiate() as Camera2D
@@ -88,12 +99,60 @@ func _ready() -> void:
 		if timekeeper.has_signal("resumed"):
 			timekeeper.resumed.connect(_on_timekeeper_resumed)
 
+	# Initialize combat UIs with CanvasLayers for proper rendering
+	var encounter_canvas: CanvasLayer = CanvasLayer.new()
+	encounter_canvas.layer = 10
+	encounter_canvas.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(encounter_canvas)
+
+	var encounter_ui_scene: PackedScene = preload("res://UI/EncounterUI.tscn")
+	_encounter_ui = encounter_ui_scene.instantiate() as Control
+	_encounter_ui.process_mode = Node.PROCESS_MODE_ALWAYS
+	encounter_canvas.add_child(_encounter_ui)
+	_encounter_ui.combat_ended.connect(_on_combat_ended)
+	_encounter_ui.exit_pressed.connect(_on_encounter_exit)
+
+	var loot_canvas: CanvasLayer = CanvasLayer.new()
+	loot_canvas.layer = 10
+	loot_canvas.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(loot_canvas)
+
+	var loot_ui_scene: PackedScene = preload("res://UI/LootUI.tscn")
+	_loot_ui = loot_ui_scene.instantiate() as Control
+	_loot_ui.process_mode = Node.PROCESS_MODE_ALWAYS
+	loot_canvas.add_child(_loot_ui)
+	_loot_ui.loot_closed.connect(_on_loot_closed)
+
+	var game_over_canvas: CanvasLayer = CanvasLayer.new()
+	game_over_canvas.layer = 10
+	game_over_canvas.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(game_over_canvas)
+
+	var game_over_ui_scene: PackedScene = preload("res://UI/GameOverUI.tscn")
+	_game_over_ui = game_over_ui_scene.instantiate() as Control
+	_game_over_ui.process_mode = Node.PROCESS_MODE_ALWAYS
+	game_over_canvas.add_child(_game_over_ui)
+
+	# Connect any pre-existing caravan signals
+	for caravan in get_tree().get_nodes_in_group("caravans"):
+		if caravan is Caravan:
+			caravan.player_initiated_chase.connect(_on_chase_initiated)
+
 func _process(delta: float) -> void:
 	# Update caravan spawn timer
 	caravan_spawn_timer += delta
 	if caravan_spawn_timer >= caravan_spawn_interval:
 		caravan_spawn_timer = 0.0
 		_try_spawn_caravans()
+
+	# Update pathline during chase
+	if _player_bus != null and bus != null:
+		var chase_target: Node2D = _player_bus.get_chase_target()
+		if chase_target != null:
+			var start_on_nav: Vector2 = _snap_to_nav(bus.global_position)
+			var target_on_nav: Vector2 = _snap_to_nav(chase_target.global_position)
+			var world_path: PackedVector2Array = _compute_nav_path(start_on_nav, target_on_nav)
+			_set_path_line(world_path)
 
 func _physics_process(_delta: float) -> void:
 	if bus == null or _path_world.size() == 0 or path_line == null:
@@ -111,6 +170,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
 			if bus == null:
 				return
+
+			# Cancel any active chase
+			if _player_bus != null and _player_bus.get_chase_target() != null:
+				_player_bus.chase_target(null)
 
 			# Snap both endpoints to the navmesh
 			var start_on_nav: Vector2 = _snap_to_nav(bus.global_position)
@@ -212,19 +275,14 @@ func _await_nav_ready() -> void:
 # ============================================================
 func _try_spawn_caravans() -> void:
 	if item_db == null:
-		print("[Caravan Spawner] ItemDB is null - cannot spawn caravans")
 		return
 
 	if caravan_types.is_empty():
-		print("[Caravan Spawner] No caravan types configured")
 		return
 
 	var hubs: Array[Hub] = _get_all_hubs()
 	if hubs.is_empty():
-		print("[Caravan Spawner] No hubs found in scene")
 		return
-
-	print("[Caravan Spawner] Checking %d hubs for caravan spawning..." % hubs.size())
 
 	# Try to spawn a caravan from each hub
 	for hub in hubs:
@@ -232,29 +290,13 @@ func _try_spawn_caravans() -> void:
 
 func _try_spawn_caravan_from_hub(home_hub: Hub, all_hubs: Array[Hub]) -> void:
 	if home_hub == null:
-		print("[Caravan Spawner] Hub is null")
 		return
 
 	if home_hub.item_db == null:
-		print("[Caravan Spawner] Hub '%s' has no ItemDB assigned" % home_hub.name)
 		return
 
 	if home_hub.state == null:
-		print("[Caravan Spawner] Hub '%s' has no state assigned" % home_hub.name)
 		return
-
-	print("[Caravan Spawner] Checking hub '%s' (inventory: %d items, food_level: %.1f, infra_level: %.1f)" % [
-		home_hub.name,
-		home_hub.state.inventory.size(),
-		home_hub.food_level,
-		home_hub.infrastructure_level
-	])
-
-	# Debug: Show inventory contents
-	for item_id in home_hub.state.inventory.keys():
-		var stock: int = home_hub.state.inventory.get(item_id, 0)
-		if stock > 100:  # Only show items with significant stock
-			print("    - %s: %d units" % [item_id, stock])
 
 	# Check each caravan type to see if hub has surplus of preferred items
 	for caravan_type: CaravanType in caravan_types:
@@ -268,27 +310,22 @@ func _try_spawn_caravan_from_hub(home_hub: Hub, all_hubs: Array[Hub]) -> void:
 		# Check if this hub has surplus of this type's preferred items (with progressive threshold)
 		var has_surplus: bool = _hub_has_surplus_for_type(home_hub, caravan_type, threshold_multiplier)
 		if not has_surplus:
-			print("  - %s: No surplus (threshold x%.1f)" % [caravan_type.type_id, threshold_multiplier])
 			continue
 
 		# Spawn the caravan
-		print("  - %s: SPAWNING CARAVAN (threshold x%.1f)!" % [caravan_type.type_id, threshold_multiplier])
 		_spawn_caravan(home_hub, caravan_type, all_hubs)
 
 		# Increase threshold for next spawn by 50%
 		caravan_threshold_multipliers[key] = threshold_multiplier * 2
-		print("    Next spawn threshold: x%.1f" % caravan_threshold_multipliers[key])
 
 		break  # Only spawn one caravan per hub per check
 
 func _hub_has_surplus_for_type(hub: Hub, caravan_type: CaravanType, threshold_multiplier: float = 1.0) -> bool:
 	if hub == null or hub.item_db == null or caravan_type == null:
-		print("    [%s] Missing hub, item_db, or caravan_type" % caravan_type.type_id)
 		return false
 
 	var preferred_tags: Array[StringName] = caravan_type.preferred_tags
 	if preferred_tags.is_empty():
-		print("    [%s] No preferred tags configured" % caravan_type.type_id)
 		return false
 
 	var surplus_threshold: float = 200.0
@@ -297,8 +334,6 @@ func _hub_has_surplus_for_type(hub: Hub, caravan_type: CaravanType, threshold_mu
 
 	# Apply progressive multiplier
 	surplus_threshold *= threshold_multiplier
-
-	print("    [%s] Checking for tags %s (threshold: %.0f)" % [caravan_type.type_id, str(preferred_tags), surplus_threshold])
 
 	for item_id: StringName in hub.state.inventory.keys():
 		var stock: int = hub.state.inventory.get(item_id, 0)
@@ -312,14 +347,11 @@ func _hub_has_surplus_for_type(hub: Hub, caravan_type: CaravanType, threshold_mu
 				var has_positive_surplus: bool = false
 				if hub.item_db.has_tag(item_id, &"food"):
 					has_positive_surplus = hub.food_level > 0.0
-					print("      Found %s (%d units, food_level: %.1f) - surplus: %s" % [item_id, stock, hub.food_level, "YES" if has_positive_surplus else "NO"])
 				elif hub.item_db.has_tag(item_id, &"material"):
 					has_positive_surplus = hub.infrastructure_level > 0.0
-					print("      Found %s (%d units, infra_level: %.1f) - surplus: %s" % [item_id, stock, hub.infrastructure_level, "YES" if has_positive_surplus else "NO"])
 				else:
 					# For other types (luxury, medical), just check stock
 					has_positive_surplus = true
-					print("      Found %s (%d units) - surplus: YES (luxury/medical/other)" % [item_id, stock])
 
 				if has_positive_surplus:
 					return true
@@ -357,9 +389,8 @@ func _spawn_caravan(home_hub: Hub, caravan_type: CaravanType, all_hubs: Array[Hu
 	caravan.setup(home_hub, state, item_db, all_hubs)
 	active_caravans.append(caravan)
 
-	print("    [SPAWNED] %s caravan at hub %s" % [caravan_type.type_id, home_hub.name])
-
-	# Connect cleanup signal when caravan is freed
+	# Connect combat and cleanup signals
+	caravan.player_initiated_chase.connect(_on_chase_initiated)
 	caravan.tree_exited.connect(_on_caravan_removed.bind(caravan))
 
 func _on_caravan_removed(caravan: Caravan) -> void:
@@ -370,7 +401,6 @@ func _on_caravan_removed(caravan: Caravan) -> void:
 	if caravan.home_hub != null and caravan.caravan_state != null and caravan.caravan_state.caravan_type != null:
 		var key: String = "%s:%s" % [caravan.home_hub.state.hub_id, caravan.caravan_state.caravan_type.type_id]
 		caravan_threshold_multipliers[key] = 1.0
-		print("[Caravan System] Threshold reset for %s at %s (caravan destroyed)" % [caravan.caravan_state.caravan_type.type_id, caravan.home_hub.name])
 
 func _get_all_hubs() -> Array[Hub]:
 	var hubs: Array[Hub] = []
@@ -387,3 +417,50 @@ func _on_timekeeper_paused() -> void:
 
 func _on_timekeeper_resumed() -> void:
 	_is_paused = false
+
+# -------------------------------------------------------------------
+# Combat System Callbacks
+# -------------------------------------------------------------------
+func _on_chase_started() -> void:
+	pass  # Pathline will update automatically during chase
+
+func _on_chase_initiated(caravan_actor: Caravan) -> void:
+	if _player_bus != null and bus != null:
+		# Set up pathline to show route to caravan
+		var start_on_nav: Vector2 = _snap_to_nav(bus.global_position)
+		var target_on_nav: Vector2 = _snap_to_nav(caravan_actor.global_position)
+		var world_path: PackedVector2Array = _compute_nav_path(start_on_nav, target_on_nav)
+		_set_path_line(world_path)
+
+		# Start the chase
+		_player_bus.chase_target(caravan_actor)
+
+func _on_encounter_initiated(attacker: Node2D, defender: Node2D) -> void:
+	if _encounter_ui != null:
+		_encounter_ui.open_encounter(attacker, defender)
+
+func _on_combat_ended(attacker: Node2D, defender: Node2D, winner: Node2D) -> void:
+	if _encounter_ui != null:
+		_encounter_ui.close_ui()
+
+	if winner == _player_bus:
+		# Remove defeated actor immediately
+		var defeated: Node2D = defender if attacker == _player_bus else attacker
+		if defeated != null and defeated != _player_bus:
+			defeated.queue_free()
+
+		# Open loot UI
+		if _loot_ui != null:
+			_loot_ui.open(_player_bus, defeated)
+	elif winner == attacker or winner == defender:
+		if winner != _player_bus:
+			if _game_over_ui != null:
+				_game_over_ui.show_game_over()
+
+func _on_encounter_exit() -> void:
+	if _encounter_ui != null:
+		_encounter_ui.close_ui()
+
+func _on_loot_closed(_defeated_actor: Node2D) -> void:
+	# Actor already removed in _on_combat_ended
+	pass

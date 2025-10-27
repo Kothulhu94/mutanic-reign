@@ -6,10 +6,24 @@
 extends Area2D
 class_name Caravan
 
+## Emitted when player clicks on this caravan to initiate chase
+signal player_initiated_chase(caravan_actor: Caravan)
+
 # Core state
 var caravan_state: CaravanState = null
 var home_hub: Hub = null
 var current_target_hub: Hub = null
+var _is_paused: bool = false
+
+## Computed property for combat system compatibility
+var charactersheet: CharacterSheet:
+	get:
+		if caravan_state != null:
+			return caravan_state.leader_sheet
+		return null
+
+# Health visual
+var _health_visual: Control
 
 # Skill-based bonuses (calculated once at setup)
 var _price_modifier_bonus: float = 0.0  # From NegotiationTactics skill
@@ -45,10 +59,21 @@ var visited_hubs: Array[Hub] = []
 var purchase_prices: Dictionary = {}  # item_id -> price paid per unit
 
 func _ready() -> void:
-	add_to_group("caravan")
+	add_to_group("caravans")
 
 	# Get NavigationAgent2D reference
 	nav_agent = get_node_or_null("NavigationAgent2D") as NavigationAgent2D
+
+	# Connect input event signal for clicking
+	input_event.connect(_on_input_event)
+
+	# Connect to Timekeeper pause/resume signals
+	var timekeeper: Node = get_node_or_null("/root/Timekeeper")
+	if timekeeper != null:
+		if timekeeper.has_signal("paused"):
+			timekeeper.paused.connect(_on_timekeeper_paused)
+		if timekeeper.has_signal("resumed"):
+			timekeeper.resumed.connect(_on_timekeeper_resumed)
 
 func setup(home: Hub, state: CaravanState, db: ItemDB, hubs: Array[Hub]) -> void:
 	home_hub = home
@@ -56,8 +81,20 @@ func setup(home: Hub, state: CaravanState, db: ItemDB, hubs: Array[Hub]) -> void
 	item_db = db
 	all_hubs = hubs
 
-	# Apply skill bonuses if leader has skills
+	# Initialize health for combat
 	if caravan_state != null and caravan_state.leader_sheet != null:
+		caravan_state.leader_sheet.initialize_health()
+
+		# Set up health visual
+		var health_visual_scene: PackedScene = preload("res://UI/ActorHealthVisual.tscn")
+		_health_visual = health_visual_scene.instantiate() as Control
+		if _health_visual != null:
+			add_child(_health_visual)
+			_health_visual.position = Vector2(-18, -35)
+			caravan_state.leader_sheet.health_changed.connect(_on_health_changed)
+			_on_health_changed(caravan_state.leader_sheet.current_health, caravan_state.leader_sheet.get_effective_health())
+
+		# Apply skill bonuses if leader has skills
 		_apply_skill_bonuses()
 
 	# Configure navigation from CaravanType
@@ -76,6 +113,10 @@ func setup(home: Hub, state: CaravanState, db: ItemDB, hubs: Array[Hub]) -> void
 	_transition_to(State.BUYING_AT_HOME)
 
 func _process(delta: float) -> void:
+	# Don't process AI if paused
+	if _is_paused:
+		return
+
 	match current_state:
 		State.IDLE:
 			_state_idle()
@@ -128,26 +169,16 @@ func _state_buying_at_home() -> void:
 				purchase_prices[item_id] = price
 				total_bought += amount_to_buy
 
-	print("[Caravan %s @ %s] Bought %d items, inventory: %d types" % [
-		caravan_state.caravan_type.type_id if caravan_state.caravan_type else "?",
-		home_hub.name,
-		total_bought,
-		caravan_state.inventory.size()
-	])
-
 	# Find a destination hub
 	if caravan_state.inventory.size() > 0:
 		_find_next_destination()
 		if current_target_hub != null:
-			print("  -> Traveling to %s" % current_target_hub.name)
 			_transition_to(State.TRAVELING)
 		else:
 			# No destination found, return to idle
-			print("  -> No destination, going idle")
 			_transition_to(State.IDLE)
 	else:
 		# Couldn't buy anything
-		print("  -> Couldn't buy anything, going idle")
 		_transition_to(State.IDLE)
 
 func _state_traveling(delta: float) -> void:
@@ -352,11 +383,6 @@ func _apply_skill_bonuses() -> void:
 		# Simplified: 1.5% better prices per rank
 		# Full implementation would read base_effect_per_rank from SkillDatabase
 		_price_modifier_bonus = float(negotiation_rank) * 0.015
-		print("[Caravan %s] NegotiationTactics Rank %d: %.1f%% price bonus" % [
-			caravan_state.caravan_type.type_id if caravan_state.caravan_type else "?",
-			negotiation_rank,
-			_price_modifier_bonus * 100.0
-		])
 
 	# Apply CaravanLogistics skill (affects speed + capacity)
 	var logistics_rank: int = sheet.get_skill_rank(&"caravan_logistics")
@@ -368,12 +394,6 @@ func _apply_skill_bonuses() -> void:
 
 		# Apply speed bonus to movement_speed
 		movement_speed *= (1.0 + _speed_bonus)
-
-		print("[Caravan %s] CaravanLogistics Rank %d: %.1f%% speed/capacity bonus" % [
-			caravan_state.caravan_type.type_id if caravan_state.caravan_type else "?",
-			logistics_rank,
-			logistics_bonus * 100.0
-		])
 
 # ============================================================
 # Navigation
@@ -398,3 +418,23 @@ func get_state_name() -> String:
 		State.SEEKING_NEXT_HUB: return "Seeking"
 		State.RETURNING_HOME: return "Returning"
 		_: return "Unknown"
+
+# ============================================================
+# Input & Health Handlers
+# ============================================================
+func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
+	if event is InputEventMouseButton:
+		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
+			player_initiated_chase.emit(self)
+			get_viewport().set_input_as_handled()
+
+func _on_health_changed(new_health: int, max_health: int) -> void:
+	if _health_visual != null:
+		_health_visual.update_health(new_health, max_health)
+
+func _on_timekeeper_paused() -> void:
+	_is_paused = true
+
+func _on_timekeeper_resumed() -> void:
+	_is_paused = false

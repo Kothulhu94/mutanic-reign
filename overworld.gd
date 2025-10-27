@@ -3,6 +3,9 @@ extends Node2D
 @export var bus_scene: PackedScene = preload("res://Actors/Bus.tscn")
 @export var camera_scene: PackedScene = preload("res://Actors/PlayerCamera.tscn")
 @export var caravan_scene: PackedScene = preload("res://Actors/Caravan.tscn")
+@export var encounter_ui_scene: PackedScene
+@export var loot_ui_scene: PackedScene
+@export var game_over_ui_scene: PackedScene
 
 @export var map_origin: Vector2 = Vector2.ZERO
 @export var map_size: Vector2 = Vector2(8192, 8192)
@@ -32,6 +35,11 @@ var _path_world: PackedVector2Array = PackedVector2Array()
 var _is_paused: bool = false
 @onready var path_line: Line2D = get_node_or_null("PathLine")
 
+var _player_bus: Bus
+var _encounter_ui: Control
+var _loot_ui: Control
+var _game_over_ui: Control
+
 func _ready() -> void:
 	await _await_nav_ready()
 
@@ -45,6 +53,7 @@ func _ready() -> void:
 	# Spawn Bus
 	bus = bus_scene.instantiate() as CharacterBody2D
 	add_child(bus)
+	_player_bus = bus as Bus
 
 	# Spawn position snapped to the navmesh (fallback to base if nav has no point)
 	var spawn_base: Vector2 = map_origin + bus_spawn_point
@@ -57,6 +66,10 @@ func _ready() -> void:
 	if _agent != null:
 		_agent.navigation_layers = NAV_LAYERS
 		_agent.target_position = final_position
+
+	# Connect bus signals
+	if _player_bus != null:
+		_player_bus.encounter_initiated.connect(_on_encounter_initiated)
 
 	# Spawn Camera
 	cam = camera_scene.instantiate() as Camera2D
@@ -87,6 +100,27 @@ func _ready() -> void:
 			timekeeper.paused.connect(_on_timekeeper_paused)
 		if timekeeper.has_signal("resumed"):
 			timekeeper.resumed.connect(_on_timekeeper_resumed)
+
+	# Initialize combat UIs
+	if encounter_ui_scene != null:
+		_encounter_ui = encounter_ui_scene.instantiate() as Control
+		add_child(_encounter_ui)
+		_encounter_ui.combat_ended.connect(_on_combat_ended)
+		_encounter_ui.retreat_pressed.connect(_on_encounter_retreat)
+
+	if loot_ui_scene != null:
+		_loot_ui = loot_ui_scene.instantiate() as Control
+		add_child(_loot_ui)
+		_loot_ui.loot_closed.connect(_on_loot_closed)
+
+	if game_over_ui_scene != null:
+		_game_over_ui = game_over_ui_scene.instantiate() as Control
+		add_child(_game_over_ui)
+
+	# Connect any pre-existing caravan signals
+	for caravan in get_tree().get_nodes_in_group("caravans"):
+		if caravan is Caravan:
+			caravan.player_initiated_chase.connect(_on_chase_initiated)
 
 func _process(delta: float) -> void:
 	# Update caravan spawn timer
@@ -359,7 +393,8 @@ func _spawn_caravan(home_hub: Hub, caravan_type: CaravanType, all_hubs: Array[Hu
 
 	print("    [SPAWNED] %s caravan at hub %s" % [caravan_type.type_id, home_hub.name])
 
-	# Connect cleanup signal when caravan is freed
+	# Connect combat and cleanup signals
+	caravan.player_initiated_chase.connect(_on_chase_initiated)
 	caravan.tree_exited.connect(_on_caravan_removed.bind(caravan))
 
 func _on_caravan_removed(caravan: Caravan) -> void:
@@ -387,3 +422,34 @@ func _on_timekeeper_paused() -> void:
 
 func _on_timekeeper_resumed() -> void:
 	_is_paused = false
+
+# -------------------------------------------------------------------
+# Combat System Callbacks
+# -------------------------------------------------------------------
+func _on_chase_initiated(caravan_actor: Caravan) -> void:
+	if _player_bus != null:
+		_player_bus.chase_target(caravan_actor)
+
+func _on_encounter_initiated(attacker: Node2D, defender: Node2D) -> void:
+	if _encounter_ui != null:
+		_encounter_ui.open_encounter(attacker, defender)
+
+func _on_combat_ended(attacker: Node2D, defender: Node2D, winner: Node2D) -> void:
+	if _encounter_ui != null:
+		_encounter_ui.close_ui()
+
+	if winner == _player_bus:
+		if _loot_ui != null:
+			_loot_ui.open(_player_bus, defender)
+	elif winner == attacker or winner == defender:
+		if winner != _player_bus:
+			if _game_over_ui != null:
+				_game_over_ui.show_game_over()
+
+func _on_encounter_retreat() -> void:
+	if _encounter_ui != null:
+		_encounter_ui.close_ui()
+
+func _on_loot_closed(defeated_actor: Node2D) -> void:
+	if defeated_actor != null:
+		defeated_actor.queue_free()

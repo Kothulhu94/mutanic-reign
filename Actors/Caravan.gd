@@ -6,10 +6,17 @@
 extends Area2D
 class_name Caravan
 
+## Emitted when player clicks on this caravan to initiate chase
+signal player_initiated_chase(caravan_actor: Caravan)
+
 # Core state
 var caravan_state: CaravanState = null
 var home_hub: Hub = null
 var current_target_hub: Hub = null
+
+# Health visual
+@export var health_visual_scene: PackedScene
+var _health_visual: Control
 
 # Skill-based bonuses (calculated once at setup)
 var _price_modifier_bonus: float = 0.0  # From NegotiationTactics skill
@@ -45,10 +52,13 @@ var visited_hubs: Array[Hub] = []
 var purchase_prices: Dictionary = {}  # item_id -> price paid per unit
 
 func _ready() -> void:
-	add_to_group("caravan")
+	add_to_group("caravans")
 
 	# Get NavigationAgent2D reference
 	nav_agent = get_node_or_null("NavigationAgent2D") as NavigationAgent2D
+
+	# Connect input event signal for clicking
+	input_event.connect(_on_input_event)
 
 func setup(home: Hub, state: CaravanState, db: ItemDB, hubs: Array[Hub]) -> void:
 	home_hub = home
@@ -56,8 +66,20 @@ func setup(home: Hub, state: CaravanState, db: ItemDB, hubs: Array[Hub]) -> void
 	item_db = db
 	all_hubs = hubs
 
-	# Apply skill bonuses if leader has skills
+	# Initialize health for combat
 	if caravan_state != null and caravan_state.leader_sheet != null:
+		caravan_state.leader_sheet.initialize_health()
+
+		# Set up health visual
+		if health_visual_scene != null:
+			_health_visual = health_visual_scene.instantiate() as Control
+			if _health_visual != null:
+				add_child(_health_visual)
+				_health_visual.position = Vector2(-18, -20)
+				caravan_state.leader_sheet.health_changed.connect(_on_health_changed)
+				_on_health_changed(caravan_state.leader_sheet.current_health, caravan_state.leader_sheet.get_effective_health())
+
+		# Apply skill bonuses if leader has skills
 		_apply_skill_bonuses()
 
 	# Configure navigation from CaravanType
@@ -398,3 +420,17 @@ func get_state_name() -> String:
 		State.SEEKING_NEXT_HUB: return "Seeking"
 		State.RETURNING_HOME: return "Returning"
 		_: return "Unknown"
+
+# ============================================================
+# Input & Health Handlers
+# ============================================================
+func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
+	if event is InputEventMouseButton:
+		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
+			player_initiated_chase.emit(self)
+			get_viewport().set_input_as_handled()
+
+func _on_health_changed(new_health: int, max_health: int) -> void:
+	if _health_visual != null:
+		_health_visual.update_health(new_health, max_health)
